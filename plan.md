@@ -67,7 +67,7 @@ understood in **under 15 seconds**, in any language.
 | Phase | State |
 |---|---|
 | 0. Scaffold + toolchain | ✅ Done — SDK 7.26.0, `tsc --noEmit` clean, `npm run build` clean |
-| 0b. Deploy pipeline proven on a real phone | ⬜ **Blocked on you** — nothing else is validated until this passes |
+| 0b. Deploy pipeline proven on a real phone | ⬜ **Blocked on you** — de-risked as far as possible: `npm run preflight` passes |
 | 1. Live handshake vertical slice | ✅ Code complete, **untested on device** |
 | 2. Async persistence + pending hands | ✅ Code complete, **boots clean**, untested with a client |
 | 3. Mobile UX pass | ✅ Code complete; **verified running on a real phone** |
@@ -252,6 +252,34 @@ These are not preferences — they are things that **do not work on the target p
 > The `TextShape` one is the trap: it renders fine in desktop preview and wrong on a
 > phone, so it would have passed every test available on this machine and failed on
 > the only platform that counts.
+
+---
+
+## 5b2. Deploy readiness
+
+`npm run preflight` runs a production build and checks everything checkable before you
+click Publish. Current state: **5 files, 0.56 MB, all hard limits passed.**
+
+| Limit | Kind | Ours |
+|---|---|---|
+| File count | **HARD — blocks deploy** | 5 / 200 |
+| Total upload size | **HARD — blocks deploy** | 0.56 MB / 15 MB |
+| Per-file size | **HARD — blocks deploy** | 0.45 MB / 50 MB |
+| Rendered entities | soft (warning) | ≤ 115 / 200 |
+| Materials | soft (warning) | approaches `log2(2)×20 = 20` in a *full* world |
+| Height | soft (warning) | ~4.8 m / 20 m |
+
+Only entities **actually being rendered** count toward the soft limits, and slots that were
+never used get no mesh at all — so an empty world sits far below them and a heavily-used one
+approaches them. Materials are the one to watch: a world with all 60 links and 24 hands
+active would carry roughly 90 materials against a soft cap of 20. That is a warning and a
+frame-rate cost, not a deploy failure, and `LINK_SLOT_COUNT` / `HAND_SLOT_COUNT` in
+`config.ts` are the dials if measurement says it matters.
+
+> **The 91% mistake.** `sdk-commands deploy` has no `--production` flag and rebuilds by
+> default, so it is easy to ship the dev bundle: 5669 KB against 463 KB, almost all of it an
+> inline sourcemap every visitor downloads before seeing anything. Preflight fails the run
+> if the bundle looks like a dev build.
 
 ---
 

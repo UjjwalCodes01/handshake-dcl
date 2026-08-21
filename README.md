@@ -161,6 +161,25 @@ same Wi-Fi.
 > `npm install @dcl/sdk@latest` — it moves the project off that branch and silently removes
 > every trace of persistence. Use `npm run upgrade-sdk`.
 
+### Before publishing
+
+```bash
+npm run preflight       # production build + pre-deploy checks
+```
+
+This verifies the hard limits that **block a deployment** (file count, total size,
+per-file size), confirms every file `scene.json` references exists, and catches the
+easiest mistake to make here: shipping the development bundle.
+
+A dev build carries a ~5 MB inline sourcemap and deploys perfectly happily — it just
+costs every visitor a multi-megabyte download before anything renders. On a phone
+that is the difference between "loading" and "broken".
+
+```
+dev build         5669 KB
+production build   463 KB   (91% smaller)
+```
+
 Deployment is manual through **Creator Hub → Publish → Publish to World**. Publishing the
 scene publishes the Multiplayer Server with it; there is no separate hosting.
 
