@@ -24,16 +24,21 @@ A Decentraland World lives at a NAME you own. The docs are explicit:
 | You own none | Claim one for **100 MANA** at the link above, or buy a minted one on the marketplace |
 | You own an ENS `.eth` domain | That works too — use it instead |
 
-### Known status of this project's target
+### This project's target
 
-`scene.json` currently targets **`handshake-dcl.dcl.eth`**. As of writing:
+`scene.json` targets **`handshakedcl.dcl.eth`**, from the NAME **`HandShakeDcl`**.
 
-- `handshake.dcl.eth` (without `-dcl`) is owned by **someone else** — not available
-- `handshake-dcl.dcl.eth` did **not** appear in the NAME registry, i.e. looks unclaimed
-- Nothing has verified that *your* wallet owns it
+**World names are lowercase.** Checked against the live index: of 1582 deployed
+worlds, **zero** contain an uppercase character. So a NAME registered as
+`HandShakeDcl` produces the world `handshakedcl.dcl.eth`, and that lowercase form
+is what must appear in `scene.json` — regardless of how it looks in the Builder.
 
-So treat the name in `scene.json` as **aspirational until confirmed**. If the Builder
-shows you own something different, edit `scene.json` before deploying:
+Note it has **no hyphen**. An earlier draft targeted `handshake-dcl.dcl.eth`, which
+is a different name entirely and would have failed to deploy.
+
+For reference: `handshake.dcl.eth` (no suffix) is already owned by someone else.
+
+If the Builder shows you own something different, edit `scene.json` before deploying:
 
 ```json
 "worldConfiguration": { "name": "your-actual-name.dcl.eth" }
@@ -93,8 +98,8 @@ building for production first — it will rebuild in dev mode.
 ## 4. Verify it is live
 
 ```
-/goto handshake-dcl.dcl.eth        (in Decentraland chat)
-decentraland://?realm=handshake-dcl.dcl.eth
+/goto handshakedcl.dcl.eth        (in Decentraland chat)
+decentraland://?realm=handshakedcl.dcl.eth
 ```
 
 Or check the content server directly:

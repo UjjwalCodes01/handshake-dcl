@@ -8,7 +8,7 @@ Guidance for Claude Code working in this repository.
 
 ## Project in one line
 
-**Handshake** — a mobile-first social multiplayer Decentraland **SDK7** scene, deployed to the World `handshake-dcl.dcl.eth`, for the Friendzone Mobile Buildathon (deadline **Sep 4, 2026**).
+**Handshake** — a mobile-first social multiplayer Decentraland **SDK7** scene, deployed to the World `handshakedcl.dcl.eth`, for the Friendzone Mobile Buildathon (deadline **Sep 4, 2026**).
 
 The core mechanic is **not yet locked** (see `AGENTS.md` §1b). Don't assume a design or start building gameplay systems without confirming with me first.
 

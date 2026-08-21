@@ -8,7 +8,7 @@ Claude Code reads `CLAUDE.md`, which defers to this file for all technical rules
 ## 1. What this project is
 
 **Project name:** Handshake
-**World / NAME:** `handshake-dcl.dcl.eth` *(pending claim — verify on the Builder before first deploy)*
+**World / NAME:** `handshakedcl.dcl.eth` *(pending claim — verify on the Builder before first deploy)*
 
 A Decentraland scene built for the **Friendzone Mobile Buildathon** (DCL Regenesis Labs, Aug 14 – Sep 4 2026).
 
