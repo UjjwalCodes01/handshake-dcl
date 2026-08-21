@@ -1,0 +1,60 @@
+{
+  "ecs7": true,
+  "runtimeVersion": "7",
+  "display": {
+    "title": "Handshake",
+    "description": "Meet a stranger. Confirm each other. Build something neither of you could alone.",
+    "navmapThumbnail": "images/scene-thumbnail.png"
+  },
+  "owner": "",
+  "contact": {
+    "name": "",
+    "email": ""
+  },
+  "main": "bin/index.js",
+  "tags": [
+    "social",
+    "multiplayer",
+    "mobile",
+    "coop"
+  ],
+  "worldConfiguration": {
+    "name": "handshake-dcl.dcl.eth"
+  },
+  "scene": {
+    "parcels": [
+      "0,0"
+    ],
+    "base": "0,0"
+  },
+  "spawnPoints": [
+    {
+      "name": "spawn_ring",
+      "default": true,
+      "position": {
+        "x": [
+          4,
+          12
+        ],
+        "y": [
+          0,
+          0
+        ],
+        "z": [
+          3,
+          5
+        ]
+      },
+      "cameraTarget": {
+        "x": 8,
+        "y": 1.6,
+        "z": 8
+      }
+    }
+  ],
+  "featureToggles": {
+    "voiceChat": "enabled",
+    "portableExperiences": "disabled"
+  },
+  "authoritativeMultiplayer": true
+}
