@@ -1,5 +1,7 @@
 import { Storage } from '@dcl/sdk/server'
 import { isServer } from '@dcl/sdk/network'
+import { WriteQueue } from './writeQueue'
+import type { QueueEntry } from './writeQueue'
 
 /**
  * Durable persistence, wrapped so it cannot silently lose data.
@@ -30,22 +32,16 @@ const DEBOUNCE_MS = 5000
 const MAX_ATTEMPTS = 5
 const BACKOFF_MS = [0, 1000, 3000, 8000, 20000]
 
-type Dirty = {
-  key: string
-  payload: string
-  attempts: number
-  /** Server clock. Single writer, single clock — safe to compare. */
-  readyAt: number
-}
+const queue = new WriteQueue({
+  debounceMs: DEBOUNCE_MS,
+  maxAttempts: MAX_ATTEMPTS,
+  backoffMs: BACKOFF_MS
+})
 
-const dirty = new Map<string, Dirty>()
 let inFlight = 0
 
-/** Keys that exhausted every retry. Surfaced so failure is never invisible. */
-const failed = new Set<string>()
-
 export function getFailedKeys(): string[] {
-  return [...failed]
+  return queue.failedKeys()
 }
 
 /**
@@ -65,15 +61,7 @@ export function persist(key: string, value: unknown): void {
     return
   }
 
-  const existing = dirty.get(key)
-  dirty.set(key, {
-    key,
-    payload,
-    attempts: 0,
-    // Preserve an in-progress backoff so a hot key cannot reset its own retry timer.
-    readyAt: existing ? existing.readyAt : Date.now() + DEBOUNCE_MS
-  })
-  failed.delete(key)
+  queue.enqueue(key, payload, Date.now())
 }
 
 /**
@@ -119,41 +107,29 @@ export async function loadAll(prefix: string): Promise<Map<string, unknown>> {
   return out
 }
 
-async function writeOne(entry: Dirty): Promise<void> {
+async function writeOne(entry: QueueEntry): Promise<void> {
   inFlight += 1
   try {
     const ok = await Storage.set(entry.key, entry.payload)
     if (ok) {
-      // Only clear if nothing newer arrived while the write was in flight.
-      const current = dirty.get(entry.key)
-      if (current && current.payload === entry.payload) dirty.delete(entry.key)
+      queue.onSuccess(entry)
       return
     }
-    scheduleRetry(entry)
+    retire(entry)
   } catch (error) {
     // Documented as non-throwing, but a runtime-level rejection (for example the
     // concurrent-host-call cap) can still surface here. Treat it as a failed write.
     console.error(`[storage] write rejected for "${entry.key}"`, error)
-    scheduleRetry(entry)
+    retire(entry)
   } finally {
     inFlight -= 1
   }
 }
 
-function scheduleRetry(entry: Dirty): void {
-  const current = dirty.get(entry.key)
-  // A newer value superseded this one; let that write proceed on its own schedule.
-  if (!current || current.payload !== entry.payload) return
-
-  current.attempts += 1
-  if (current.attempts >= MAX_ATTEMPTS) {
-    dirty.delete(entry.key)
-    failed.add(entry.key)
+function retire(entry: QueueEntry): void {
+  if (queue.onFailure(entry, Date.now())) {
     console.error(`[storage] GAVE UP on "${entry.key}" after ${MAX_ATTEMPTS} attempts — data not persisted`)
-    return
   }
-  const backoff = BACKOFF_MS[Math.min(current.attempts, BACKOFF_MS.length - 1)]
-  current.readyAt = Date.now() + backoff
 }
 
 /**
@@ -164,15 +140,10 @@ function scheduleRetry(entry: Dirty): void {
  */
 export function flushStorage(): void {
   if (!isServer()) return
-  if (dirty.size === 0) return
+  if (queue.size === 0) return
 
-  const now = Date.now()
-  for (const entry of dirty.values()) {
-    if (inFlight >= MAX_CONCURRENT) return
-    if (entry.readyAt > now) continue
-    // Push readyAt forward so the same entry is not started twice while in flight.
-    entry.readyAt = now + DEBOUNCE_MS
-    void writeOne({ ...entry })
+  for (const entry of queue.claimReady(Date.now(), MAX_CONCURRENT - inFlight)) {
+    void writeOne(entry)
   }
 }
 
@@ -182,7 +153,6 @@ export function flushStorage(): void {
  */
 export function flushNow(): void {
   if (!isServer()) return
-  const now = Date.now()
-  for (const entry of dirty.values()) entry.readyAt = now
+  queue.forceReady(Date.now())
   flushStorage()
 }

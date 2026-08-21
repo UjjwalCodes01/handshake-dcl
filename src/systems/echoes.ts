@@ -21,20 +21,31 @@ import { getSelfAddress } from '../net/identity'
  * actually matters (links, hands, counts) remains server-authoritative.
  */
 
-const enum Phase {
+/**
+ * Phases of the puzzle.
+ *
+ * A plain frozen object rather than a `const enum`. Enums GENERATE code, and
+ * this project is constrained to erasable-only TypeScript so every module stays
+ * loadable by Node's strip-only runtime — which is what makes the logic
+ * testable outside the QuickJS sandbox. `erasableSyntaxOnly` in tsconfig
+ * enforces it.
+ */
+const Phase = {
   /** Nobody is near; nothing is running. */
-  Idle,
+  Idle: 0,
   /** Pause before playback so the player can look up. */
-  LeadIn,
+  LeadIn: 1,
   /** Flashing the sequence. */
-  Playback,
+  Playback: 2,
   /** Waiting for the player to answer. */
-  Input,
+  Input: 3,
   /** Brief hold after a right or wrong answer. */
-  Resolve
-}
+  Resolve: 4
+} as const
 
-let phase = Phase.Idle
+type Phase = (typeof Phase)[keyof typeof Phase]
+
+let phase: Phase = Phase.Idle
 let round = 0
 let sequence: number[] = []
 /** How far through the sequence the player has answered correctly. */
