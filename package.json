@@ -1,7 +1,7 @@
 {
   "name": "handshake-dcl",
   "version": "0.1.0",
-  "description": "Handshake \u2014 a mobile-first social multiplayer Decentraland SDK7 scene",
+  "description": "Handshake — a mobile-first social multiplayer Decentraland SDK7 scene",
   "private": true,
   "license": "MIT",
   "scripts": {

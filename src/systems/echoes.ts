@@ -47,6 +47,8 @@ let lastResultOk = false
 let earnedMark = false
 
 let reachablePillar = -1
+/** Seconds since the scene started, so the puzzle cannot ambush an arrival. */
+let sinceStart = 0
 
 export function getReachablePillar(): number {
   return reachablePillar
@@ -182,6 +184,8 @@ export function answerPillar(): void {
  * Drives the puzzle. Called from the throttled tick, never per frame.
  */
 export function echoesSystem(dt: number): void {
+  sinceStart += dt
+
   // Work out which pillar the player can answer.
   const selfTransform = Transform.getOrNull(engine.PlayerEntity)
   reachablePillar = -1
@@ -209,8 +213,10 @@ export function echoesSystem(dt: number): void {
   switch (phase) {
     case Phase.Idle:
       // Walking up to a pillar starts it. No prompt, no button to find —
-      // approaching IS the interaction.
-      if (nearRing) startRound(0)
+      // approaching IS the interaction. The grace period keeps a player who
+      // happens to arrive next to a pillar from being hijacked before they have
+      // even seen the lattice.
+      if (nearRing && sinceStart >= ECHOES.GRACE_S) startRound(0)
       return
 
     case Phase.LeadIn:
@@ -274,4 +280,5 @@ export function echoesSystem(dt: number): void {
 export function resetEchoes(): void {
   reset()
   earnedMark = false
+  sinceStart = 0
 }

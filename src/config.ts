@@ -88,6 +88,17 @@ export const ECHOES = {
   /** How close you must stand to answer a pillar. */
   REACH_M: 2.6,
 
+  /**
+   * How long after arriving before the puzzle may auto-start, in seconds.
+   *
+   * A spawn point once sat 1.9 m from a pillar, so players were dropped straight
+   * into a memory game before they had looked around — a judge would have met
+   * the puzzle before the handshake, inverting what this scene is about. The
+   * spawn has moved, but this makes the ordering impossible to break by accident
+   * the next time the geometry is tuned.
+   */
+  GRACE_S: 4,
+
   /** Sequence length per round. Three rounds, then the mark is earned. */
   ROUND_LENGTHS: [3, 4, 5],
 

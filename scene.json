@@ -29,20 +29,20 @@
   },
   "spawnPoints": [
     {
-      "name": "spawn_ring",
+      "name": "spawn_approach",
       "default": true,
       "position": {
         "x": [
-          4,
-          12
+          12.2,
+          13.7
         ],
         "y": [
           0,
           0
         ],
         "z": [
-          3,
-          5
+          12.2,
+          13.7
         ]
       },
       "cameraTarget": {

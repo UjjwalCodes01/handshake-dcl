@@ -64,9 +64,12 @@ export function setPillarLit(index: number, lit: boolean): void {
   Material.setPbrMaterial(entity, {
     albedoColor: Color4.create(tint.r, tint.g, tint.b, 1),
     emissiveColor: Color4.create(tint.r, tint.g, tint.b, 1),
-    // Dark but still tinted when idle, so each pillar's identity is always
-    // readable — the sequence is carried by colour as well as position.
-    emissiveIntensity: lit ? 3.2 : 0.25,
+    // Idle pillars must be findable. At 0.25 against a near-black ground they
+    // were effectively invisible, so the puzzle existed but nobody would ever
+    // walk to it. Bright enough to read as four coloured posts from across the
+    // parcel, still well under the hands (1.8) and a lit pillar (3.2) so the
+    // social layer keeps first claim on attention.
+    emissiveIntensity: lit ? 3.2 : 0.9,
     roughness: 0.45
   })
 }
