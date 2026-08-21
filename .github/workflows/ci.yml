@@ -5,7 +5,7 @@ on:
   pull_request:
 
 jobs:
-  typecheck-and-build:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -13,21 +13,28 @@ jobs:
       - name: Use Node.js 22
         uses: actions/setup-node@v4
         with:
-          # The Multiplayer Server's runtime declares engines ^22 || ^24.
-          # 22 is the lower supported bound, so CI proves the floor still builds.
+          # The Multiplayer Server runtime declares engines ^22 || ^24, so CI
+          # runs the lower bound to prove the floor still works. 22.x also has
+          # native TypeScript stripping, which the test suite relies on.
           node-version: 22
           cache: npm
 
-      # `npm ci` rather than `npm install`: it installs exactly what the lock
-      # file says and fails loudly if package.json and the lock have drifted.
-      # `npm install` would be free to re-resolve the pinned auth-server SDK
-      # prerelease onto a different build, and the failure would surface as
-      # missing isServer/Storage rather than as a dependency error.
+      # `npm ci`, never `npm install`: it installs exactly what the lock file
+      # says and fails loudly if package.json has drifted. `npm install` would be
+      # free to re-resolve the pinned auth-server SDK prerelease onto a different
+      # build, and that failure surfaces as missing isServer/Storage rather than
+      # as a dependency error.
       - name: Install dependencies
         run: npm ci
 
       - name: Typecheck
         run: npm run typecheck
+
+      # Pure-logic tests: address normalisation, placement collisions, clock-skew
+      # clamping, and synced-id uniqueness. All are silent-corruption risks that
+      # produce no error when wrong, only quiet disagreement between clients.
+      - name: Test
+        run: npm test
 
       - name: Build
         run: npm run build

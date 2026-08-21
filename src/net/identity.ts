@@ -1,15 +1,9 @@
 import { getPlayer } from '@dcl/sdk/players'
+import { normalizeAddress } from './address'
 
-/**
- * Wallet addresses arrive from different sources with different casing
- * (EIP-55 checksummed vs lowercase). Comparing them raw is a silent,
- * intermittent bug generator: two clients disagree about who is who and the
- * handshake never resolves. Every address in this scene passes through here.
- */
-export function normalizeAddress(address: string | undefined | null): string {
-  if (!address) return ''
-  return address.trim().toLowerCase()
-}
+// Re-exported so callers keep importing identity helpers from one place, while
+// the pure logic stays in a module that can be tested outside the sandbox.
+export { normalizeAddress, pairKey } from './address'
 
 let cachedSelf = ''
 
@@ -28,9 +22,4 @@ export function getSelfAddress(): string {
   if (!address) return ''
   cachedSelf = address
   return cachedSelf
-}
-
-/** Order-independent key for a pair of players. */
-export function pairKey(a: string, b: string): string {
-  return a < b ? `${a}|${b}` : `${b}|${a}`
 }

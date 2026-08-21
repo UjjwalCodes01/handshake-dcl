@@ -74,7 +74,9 @@ understood in **under 15 seconds**, in any language.
 | 3b. Solo layer — explorable lattice | ✅ Code complete, **untested on device** |
 | 3c. Solo layer — Echoes puzzle | ✅ Code complete, **untested on device** |
 | 4. Performance pass | ◐ Static half done; **device measurement is yours** |
-| 5–8. Freeze, polish, submit | ⬜ |
+| 5. Freeze | ⬜ |
+| 6. Polish + docs | ◐ README, LICENSE, CI, reproducible install ✅ · thumbnail ⬜ |
+| 7–8. Submit + buffer | ⬜ |
 
 **Aug 20 — first real device connection.** A wallet authenticated and connected from a
 phone over LAN preview (`npm run start:mobile`). The mobile testing loop no longer
@@ -383,7 +385,8 @@ Adding to this list requires cutting from it.
 | Nobody online when judges visit | **Certain** | **This is now the designed-for case, not an edge case** |
 | Entity growth tanks FPS | Medium | Bounded render cap, deterministic subset |
 | Scope creep | High | Sep 1 hard freeze; stretch list closed |
-| **Disk full on the dev machine** | **Active** | Root filesystem at 99%. Blocked an install already. See README/handoff |
+| **Disk full on the dev machine** | **Active** | Root filesystem at ~95%. Already caused a truncated download that crashed the Multiplayer Server with SIGBUS |
+| **Dependency drift off the auth-server branch** | Was live, now fixed | SDK pinned EXACTLY (no caret) and `package-lock.json` committed. A caret on a prerelease let npm resolve onto any of 8 other builds, including stable ones with no Multiplayer Server APIs |
 
 ---
 

@@ -133,8 +133,16 @@ src/
 ```bash
 npm ci                  # exact install from the lock file
 npm run typecheck       # tsc --noEmit
+npm test                # pure-logic tests, zero dependencies
 npm run build
 ```
+
+The test suite uses Node's built-in runner and native TypeScript stripping, so it
+adds **no dependencies** — a test framework has no business anywhere near the
+QuickJS sandbox. It covers the logic that fails *silently* rather than loudly:
+address normalisation, placement collisions, clock-skew clamping, and
+synced-id uniqueness. Each of those produces no error when wrong, only quiet
+disagreement between clients.
 
 Preview — **there is no Decentraland desktop client for Linux**, so the default `npm run start`
 cannot launch a viewer there:

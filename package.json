@@ -1,7 +1,7 @@
 {
   "name": "handshake-dcl",
   "version": "0.1.0",
-  "description": "Handshake \u2014 a mobile-first social multiplayer Decentraland SDK7 scene",
+  "description": "Handshake — a mobile-first social multiplayer Decentraland SDK7 scene",
   "private": true,
   "license": "MIT",
   "scripts": {
@@ -13,7 +13,8 @@
     "server-logs": "sdk-commands sdk-server-logs",
     "start:web": "sdk-commands start --web",
     "start:mobile": "sdk-commands start --mobile",
-    "start:multi": "sdk-commands start --web --multi-instance"
+    "start:multi": "sdk-commands start --web --multi-instance",
+    "test": "node --test \"test/*.test.ts\""
   },
   "devDependencies": {
     "@dcl/js-runtime": "7.26.1-32239895147.commit-3c77d90",
