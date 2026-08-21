@@ -183,6 +183,10 @@ production build   463 KB   (91% smaller)
 Deployment is manual through **Creator Hub → Publish → Publish to World**. Publishing the
 scene publishes the Multiplayer Server with it; there is no separate hosting.
 
+**See [DEPLOYMENT.md](./DEPLOYMENT.md)** for the full procedure — including the one hard
+prerequisite (you must own the NAME you are deploying to) and the three behaviours that
+can only be tested in production.
+
 ---
 
 ## Project status

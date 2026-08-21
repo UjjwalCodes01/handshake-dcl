@@ -1,6 +1,18 @@
 import { HAND_SLOT_COUNT, LINK_SLOT_COUNT } from '../sync-ids'
 import { HANDS, SERVER } from '../config'
 import { loadAll, persist } from '../net/storage'
+import {
+  chooseHandSlot,
+  clampCursor,
+  expiredHandSlots,
+  linkPairKey,
+  normalizeHandRecord,
+  normalizeLinkRecord,
+  parseAnswered
+} from './records'
+import type { HandRecord, LinkRecord } from './records'
+
+export type { HandRecord, LinkRecord } from './records'
 
 /**
  * The authoritative record of everything that has happened in this world.
@@ -19,31 +31,6 @@ const KEY_HANDS = 'v1:hands'
 const KEY_LINKS = 'v1:links'
 const KEY_STATS = 'v1:stats'
 const KEY_ANSWERED = 'v1:answered'
-
-export type HandRecord = {
-  owner: string
-  ownerName: string
-  /**
-   * Captured when the hand is extended, because that is the only moment we can
-   * observe it — by the time the hand is answered the owner is usually gone and
-   * PlayerIdentityData no longer covers them.
-   */
-  ownerIsGuest: boolean
-  /** Cosmetic only; see net/protocol.ts. */
-  marked: boolean
-  seed: number
-  createdAt: number
-}
-
-export type LinkRecord = {
-  a: string
-  b: string
-  aName: string
-  bName: string
-  live: boolean
-  seed: number
-  createdAt: number
-}
 
 /** Slot-indexed. A null entry is a free slot. */
 let hands: (HandRecord | null)[] = []
@@ -158,29 +145,10 @@ export function findHandSlotOf(owner: string): number {
  * hands are now consumed first, and step 3 remains only as a last resort so the
  * scene never refuses a visitor.
  */
-export function allocateHandSlot(now: number): number {
-  for (let i = 0; i < hands.length; i++) {
-    if (hands[i] === null) return i
-  }
-
-  let oldestExpired = -1
-  let oldestExpiredAt = Number.MAX_SAFE_INTEGER
-  let oldest = 0
-  let oldestAt = Number.MAX_SAFE_INTEGER
-
-  for (let i = 0; i < hands.length; i++) {
-    const at = hands[i]?.createdAt ?? 0
-    if (now - at > HANDS.TTL_MS && at < oldestExpiredAt) {
-      oldestExpiredAt = at
-      oldestExpired = i
-    }
-    if (at < oldestAt) {
-      oldestAt = at
-      oldest = i
-    }
-  }
-
-  return oldestExpired !== -1 ? oldestExpired : oldest
+// `now` is accepted for call-site symmetry with expireHands and to keep the
+// server's intent readable; selection itself needs no clock. See records.ts.
+export function allocateHandSlot(_now: number): number {
+  return chooseHandSlot(hands)
 }
 
 /**
@@ -188,14 +156,8 @@ export function allocateHandSlot(now: number): number {
  * can republish them. Runs on a slow timer, never on the gameplay path.
  */
 export function expireHands(now: number): number[] {
-  const cleared: number[] = []
-  for (let i = 0; i < hands.length; i++) {
-    const record = hands[i]
-    if (!record) continue
-    if (now - record.createdAt <= HANDS.TTL_MS) continue
-    hands[i] = null
-    cleared.push(i)
-  }
+  const cleared = expiredHandSlots(hands, now, HANDS.TTL_MS)
+  for (const slot of cleared) hands[slot] = null
   if (cleared.length > 0) persist(KEY_HANDS, hands)
   return cleared
 }
@@ -247,35 +209,17 @@ export async function loadLedger(): Promise<void> {
   const storedHands = stored.get(KEY_HANDS) ?? []
   if (Array.isArray(storedHands)) {
     for (let i = 0; i < Math.min(storedHands.length, HAND_SLOT_COUNT); i++) {
-      const candidate = storedHands[i]
-      if (!isHandRecord(candidate)) {
-        hands[i] = null
-        continue
-      }
-      // Tolerate records written before ownerIsGuest existed: default rather
-      // than discard, so a schema addition never wipes real history.
-      const partialHand = candidate as Partial<HandRecord>
-      hands[i] = {
-        ...candidate,
-        ownerIsGuest: typeof partialHand.ownerIsGuest === 'boolean' ? partialHand.ownerIsGuest : false,
-        marked: typeof partialHand.marked === 'boolean' ? partialHand.marked : false
-      }
+      hands[i] = normalizeHandRecord(storedHands[i])
     }
   }
 
   const storedLinks = stored.get(KEY_LINKS) ?? []
   if (Array.isArray(storedLinks)) {
     for (let i = 0; i < Math.min(storedLinks.length, LINK_SLOT_COUNT); i++) {
-      const candidate = storedLinks[i]
-      if (isLinkRecord(candidate)) {
-        const partial = candidate as Partial<LinkRecord>
-        links[i] = {
-          ...candidate,
-          aName: typeof partial.aName === 'string' ? partial.aName : '',
-          bName: typeof partial.bName === 'string' ? partial.bName : ''
-        }
-        linkedPairs.add(candidate.a < candidate.b ? `${candidate.a}|${candidate.b}` : `${candidate.b}|${candidate.a}`)
-      }
+      const record = normalizeLinkRecord(storedLinks[i])
+      if (!record) continue
+      links[i] = record
+      linkedPairs.add(linkPairKey(record.a, record.b))
     }
   }
 
@@ -285,44 +229,11 @@ export async function loadLedger(): Promise<void> {
     if (typeof record.total === 'number' && Number.isFinite(record.total) && record.total >= 0) {
       totalHandshakes = Math.floor(record.total)
     }
-    if (typeof record.cursor === 'number' && Number.isFinite(record.cursor)) {
-      // Clamp: a cursor outside the ring would silently corrupt slot writes.
-      linkCursor = ((Math.floor(record.cursor) % LINK_SLOT_COUNT) + LINK_SLOT_COUNT) % LINK_SLOT_COUNT
-    }
+    // Clamp: a cursor outside the ring would silently corrupt slot writes.
+    linkCursor = clampCursor(record.cursor, LINK_SLOT_COUNT)
   }
 
-  const storedAnswered = stored.get(KEY_ANSWERED) ?? null
-  if (storedAnswered && typeof storedAnswered === 'object' && !Array.isArray(storedAnswered)) {
-    for (const [address, count] of Object.entries(storedAnswered as Record<string, unknown>)) {
-      if (typeof count === 'number' && Number.isFinite(count) && count > 0) {
-        answered.set(address, Math.floor(count))
-      }
-    }
-  }
+  answered = parseAnswered(stored.get(KEY_ANSWERED) ?? null, SERVER.MAX_ANSWERED_ENTRIES)
 }
 
-function isHandRecord(value: unknown): value is HandRecord {
-  if (!value || typeof value !== 'object') return false
-  const record = value as Record<string, unknown>
-  return (
-    typeof record.owner === 'string' &&
-    record.owner.length > 0 &&
-    typeof record.ownerName === 'string' &&
-    typeof record.seed === 'number' &&
-    typeof record.createdAt === 'number'
-  )
-}
 
-function isLinkRecord(value: unknown): value is LinkRecord {
-  if (!value || typeof value !== 'object') return false
-  const record = value as Record<string, unknown>
-  return (
-    typeof record.a === 'string' &&
-    record.a.length > 0 &&
-    typeof record.b === 'string' &&
-    record.b.length > 0 &&
-    typeof record.live === 'boolean' &&
-    typeof record.seed === 'number' &&
-    typeof record.createdAt === 'number'
-  )
-}
