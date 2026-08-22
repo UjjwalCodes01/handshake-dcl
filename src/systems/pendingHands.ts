@@ -1,10 +1,11 @@
 import { engine, Transform, MeshRenderer, Material, Entity, VisibilityComponent, Tween } from '@dcl/sdk/ecs'
 import { Color4, Quaternion, Vector3 } from '@dcl/sdk/math'
 import { PendingHand } from '../components'
-import { COLORS, HANDS, SCENE } from '../config'
+import { COLORS, CONNECT, HANDS, SCENE } from '../config'
 import { getHandSlots } from '../entities/slots'
 import { getSelfAddress } from '../net/identity'
 import { room } from '../net/protocol'
+import { PendingRequests } from '../net/pending'
 import { consumeMark } from './echoes'
 import { slotPlacement } from '../placement'
 import { HAND_SLOT_COUNT } from '../sync-ids'
@@ -39,7 +40,14 @@ let reachableSlot = -1
 let pendingCount = 0
 /** Display name of the hand within reach, surfaced by the HUD. */
 let reachableOwnerName = ''
-const inFlight = new Set<number>()
+/**
+ * Slots we have asked the server about.
+ *
+ * Expiring, because the request can be LOST — the server discards everything
+ * sent while it cold-starts — and a lock without expiry would leave that hand
+ * permanently untappable for the rest of the session.
+ */
+const inFlight = new PendingRequests<number>(CONNECT.REQUEST_TIMEOUT_MS)
 
 /**
  * Slot of the most recent completeHand request.
@@ -66,8 +74,10 @@ export function getReachableOwnerName(): string {
 export function isSlotInFlight(slot: number): boolean {
   return inFlight.has(slot)
 }
+
+
 export function clearInFlight(slot: number): void {
-  inFlight.delete(slot)
+  inFlight.resolve(slot)
 }
 export function clearAllInFlight(): void {
   inFlight.clear()
@@ -82,7 +92,7 @@ export function clearAllInFlight(): void {
 export function completeReachableHand(): void {
   if (reachableSlot < 0) return
   if (inFlight.has(reachableSlot)) return
-  inFlight.add(reachableSlot)
+  inFlight.add(reachableSlot, Date.now())
   lastRequestedSlot = reachableSlot
   room.send('completeHand', { slot: reachableSlot })
 }
@@ -148,6 +158,9 @@ export function renderPendingHands(): void {
   const slots = getHandSlots()
   if (slots.length === 0) return
 
+  // Release anything the server never answered, so the player can retry.
+  inFlight.expire(Date.now())
+
   const self = getSelfAddress()
   const selfTransform = Transform.getOrNull(engine.PlayerEntity)
   const selfPos = selfTransform ? selfTransform.position : undefined
@@ -175,7 +188,7 @@ export function renderPendingHands(): void {
       }
       // The hand is gone — we completed it, or someone else did. Either way the
       // optimistic lock must be released or the slot stays stuck forever.
-      inFlight.delete(i)
+      inFlight.resolve(i)
       positions.delete(i)
       continue
     }

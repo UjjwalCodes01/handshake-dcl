@@ -3,6 +3,7 @@ import { getPlayer } from '@dcl/sdk/players'
 import { CONNECT } from '../config'
 import { Action, Reason, room } from './protocol'
 import { getSelfAddress } from './identity'
+import { PendingRequests } from './pending'
 import { clearAllInFlight, clearInFlight, getLastRequestedSlot } from '../systems/pendingHands'
 
 /**
@@ -26,6 +27,17 @@ let waitingFor = 0
 let answeredWhileAway = 0
 let answeredRemainingS = 0
 let hasHandOut = false
+/**
+ * The unconfirmed "I left a hand" claim.
+ *
+ * The optimistic flag makes the button react instantly, but if the request is
+ * LOST — which is what happens to anything sent while the server cold-starts —
+ * no reply ever arrives to correct it. The player would be shown as having a
+ * hand out that does not exist, and could never leave one for the rest of the
+ * session. Same expiry mechanism as the pending-hand slots.
+ */
+const HAND_OUT = 'handOut'
+const pending = new PendingRequests<string>(CONNECT.REQUEST_TIMEOUT_MS)
 
 /** How long the "you were answered" banner stays up, in seconds. */
 const ANSWERED_BANNER_S = 6
@@ -57,6 +69,7 @@ export function playerHasHandOut(): boolean {
  */
 export function markHandExtended(): void {
   hasHandOut = true
+  pending.add(HAND_OUT, Date.now())
 }
 
 export function installSessionHandlers(): void {
@@ -65,6 +78,7 @@ export function installSessionHandlers(): void {
   room.onMessage('joinAck', (data) => {
     connected = true
     waitingFor = 0
+    pending.resolve(HAND_OUT)
     hasHandOut = data.hasHandOut
     if (data.answered > 0) {
       answeredWhileAway = data.answered
@@ -85,7 +99,8 @@ export function installSessionHandlers(): void {
     }
 
     if (data.action === Action.EXTEND) {
-      // Correct the optimistic flag: true only if the hand is genuinely out.
+      // Confirmed by the server: the optimistic claim is no longer a guess.
+      pending.resolve(HAND_OUT)
       hasHandOut = data.ok || data.reason === Reason.ALREADY_EXTENDED
     }
 
@@ -94,6 +109,7 @@ export function installSessionHandlers(): void {
     // ours untouched, and clearing it here desynced us from the server.
     if (data.ok && data.action === Action.LIVE) {
       hasHandOut = false
+      pending.resolve(HAND_OUT)
     }
 
     if (data.reason === Reason.NOT_READY) {
@@ -129,6 +145,10 @@ export function sessionTick(dt: number): void {
     }
   }
 
+  // Roll back an optimistic claim the server never confirmed. Without this the
+  // button stays hidden for the rest of the session after a single lost message.
+  if (pending.expire(Date.now()).length > 0) hasHandOut = false
+
   if (connected) return
 
   waitingFor += dt
@@ -155,4 +175,5 @@ export function resetSession(): void {
   answeredWhileAway = 0
   answeredRemainingS = 0
   hasHandOut = false
+  pending.clear()
 }

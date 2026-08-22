@@ -238,5 +238,18 @@ export const CONNECT = {
   /** Never stop retrying — a stuck client can never recover otherwise. */
   SLOW_RETRY_S: 15,
   /** Show the "waking up" indicator once we have waited this long, in seconds. */
-  WAKING_AFTER_S: 2.5
+  WAKING_AFTER_S: 2.5,
+
+  /**
+   * How long to wait for a reply before assuming the request was lost, in ms.
+   *
+   * The server silently DISCARDS messages sent while it cold-starts, and that
+   * boot takes about 15 seconds. Without a timeout, a player who taps during
+   * that window waits forever: the optimistic lock never clears, so the button
+   * for that hand never returns and they cannot retry for the rest of the
+   * session. A judge arriving at a sleeping world is exactly that player.
+   *
+   * Generous enough not to fire on ordinary mobile latency.
+   */
+  REQUEST_TIMEOUT_MS: 8000
 } as const
