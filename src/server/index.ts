@@ -3,9 +3,18 @@ import { Vector3 } from '@dcl/sdk/math'
 import { isServer } from '@dcl/sdk/network'
 import { AUTH_SERVER_PEER_ID } from '@dcl/sdk/network/message-bus-sync'
 import { onLeaveScene } from '@dcl/sdk/players'
-import { HandshakeLink, PendingHand } from '../components'
+import { HandshakeLink, PendingHand, WorldStats } from '../components'
 import { HANDSHAKE, SERVER } from '../config'
-import { EMPTY_HAND, EMPTY_LINK, getHandSlot, getLinkSlot, isEmptyHand, isEmptyLink } from '../entities/slots'
+import {
+  EMPTY_HAND,
+  EMPTY_LINK,
+  getHandSlot,
+  getLinkSlot,
+  getStatsEntity,
+  isEmptyHand,
+  isEmptyLink,
+  isEmptyStats
+} from '../entities/slots'
 import { hashString } from '../hash'
 import { normalizeAddress, pairKey } from '../net/identity'
 import { Action, Reason, room } from '../net/protocol'
@@ -67,6 +76,9 @@ function installWriteGuards(): void {
   )
   HandshakeLink.validateBeforeChange(
     (value) => value.senderAddress === AUTH_SERVER_PEER_ID || isEmptyLink(value.newValue)
+  )
+  WorldStats.validateBeforeChange(
+    (value) => value.senderAddress === AUTH_SERVER_PEER_ID || isEmptyStats(value.newValue)
   )
 }
 
@@ -155,7 +167,15 @@ function publishLink(slot: number): void {
     : EMPTY_LINK)
 }
 
+/** Mirrors the authoritative total into its synced slot. */
+function publishStats(): void {
+  const entity = getStatsEntity()
+  if (entity === undefined) return
+  WorldStats.createOrReplace(entity, { totalHandshakes: getTotalHandshakes() })
+}
+
 function publishAll(): void {
+  publishStats()
   for (let i = 0; i < getHands().length; i++) publishHand(i)
   for (let i = 0; i < getLinks().length; i++) publishLink(i)
 }
@@ -172,6 +192,8 @@ function completeLink(a: string, b: string, live: boolean): void {
     pairKey(lo, hi)
   )
   publishLink(slot)
+  // The lattice shows at most LINK_SLOT_COUNT links; the total must keep rising.
+  publishStats()
 }
 
 function handleExtendHand(sender: string, marked: boolean): void {

@@ -1,8 +1,8 @@
 import { engine, Transform, MeshRenderer, Material, Entity, VisibilityComponent } from '@dcl/sdk/ecs'
 import { Color4, Quaternion, Vector3 } from '@dcl/sdk/math'
-import { HandshakeLink } from '../components'
+import { HandshakeLink, WorldStats } from '../components'
 import { COLORS, LATTICE, SCENE } from '../config'
-import { getLinkSlots } from '../entities/slots'
+import { getLinkSlots, getStatsEntity } from '../entities/slots'
 import { pairKey } from '../net/identity'
 import { slotPlacement } from '../placement'
 import { LINK_SLOT_COUNT } from '../sync-ids'
@@ -21,6 +21,18 @@ import { LINK_SLOT_COUNT } from '../sync-ids'
 type Applied = { seed: number; live: boolean; visible: boolean }
 const applied = new Map<Entity, Applied>()
 let linkCount = 0
+let totalHandshakes = 0
+
+/**
+ * Every handshake this world has ever recorded, not just the ones on screen.
+ *
+ * The lattice renders a bounded number of slots, so counting what is visible
+ * would freeze the reported total at LINK_SLOT_COUNT — a world with a thousand
+ * handshakes would claim sixty, forever.
+ */
+export function getTotalHandshakes(): number {
+  return totalHandshakes
+}
 
 /**
  * Every pair that already has a link, rebuilt each tick from synced state.
@@ -65,13 +77,6 @@ export function isLinkedWith(self: string, other: string): boolean {
   return linkedPairs.has(pairKey(self, other))
 }
 
-/**
- * Cached so the HUD can read it for free. react-ecs re-evaluates the renderer
- * roughly every frame, so anything the HUD calls is per-frame work by definition.
- */
-export function getLinkCount(): number {
-  return linkCount
-}
 
 function transformFor(slotIndex: number, seed: number): {
   position: Vector3.MutableVector3
@@ -209,6 +214,14 @@ export function renderLattice(): void {
   }
 
   linkCount = active
+
+  // Authoritative total from the server. Falling back to the rendered count
+  // keeps the number honest in the moments before the stats slot syncs, and
+  // never lets it report fewer links than are visibly on screen.
+  const statsEntity = getStatsEntity()
+  const stats = statsEntity === undefined ? null : WorldStats.getOrNull(statsEntity)
+  totalHandshakes = Math.max(stats?.totalHandshakes ?? 0, active)
+
   nearestSlot = readSlot
   nearestReading = readReading
 }
@@ -221,4 +234,5 @@ export function resetLattice(): void {
   nearestReading = null
   nearestSlot = -1
   linkCount = 0
+  totalHandshakes = 0
 }

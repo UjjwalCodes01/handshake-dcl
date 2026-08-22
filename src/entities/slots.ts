@@ -1,10 +1,15 @@
 import { engine, Entity } from '@dcl/sdk/ecs'
 import { syncEntity } from '@dcl/sdk/network'
-import { PendingHand, HandshakeLink } from '../components'
-import { HAND_SLOT_COUNT, LINK_SLOT_COUNT, handSlotId, linkSlotId } from '../sync-ids'
+import { PendingHand, HandshakeLink, WorldStats } from '../components'
+import { HAND_SLOT_COUNT, LINK_SLOT_COUNT, STATS_SLOT_ID, handSlotId, linkSlotId } from '../sync-ids'
 
+let statsEntity: Entity | undefined
 const handSlots: Entity[] = []
 const linkSlots: Entity[] = []
+
+export function getStatsEntity(): Entity | undefined {
+  return statsEntity
+}
 
 export function getHandSlot(index: number): Entity | undefined {
   return handSlots[index]
@@ -23,10 +28,15 @@ export function getLinkSlots(): readonly Entity[] {
 }
 
 /** The empty value every slot starts at, on both server and client. */
+export const EMPTY_STATS = { totalHandshakes: 0 }
 export const EMPTY_HAND = { active: false, owner: '', ownerName: '', marked: false, seed: 0, createdAt: 0 }
 export const EMPTY_LINK = { active: false, a: '', b: '', aName: '', bName: '', live: false, seed: 0, createdAt: 0 }
 
 /** True when a value is the untouched default — used by the server's write guard. */
+export function isEmptyStats(value: { totalHandshakes: number } | undefined): boolean {
+  return !value || value.totalHandshakes === 0
+}
+
 export function isEmptyHand(value: { active: boolean; owner: string } | undefined): boolean {
   return !value || (value.active === false && value.owner === '')
 }
@@ -52,7 +62,11 @@ export function isEmptyLink(value: { active: boolean; a: string; b: string } | u
  * explicit that syncing them wastes budget on values both sides derive alike.
  */
 export function createSlots(): void {
-  if (handSlots.length > 0 || linkSlots.length > 0) return // idempotent
+  if (statsEntity !== undefined) return // idempotent
+
+  statsEntity = engine.addEntity()
+  WorldStats.create(statsEntity, EMPTY_STATS)
+  syncEntity(statsEntity, [WorldStats.componentId], STATS_SLOT_ID)
 
   for (let i = 0; i < HAND_SLOT_COUNT; i++) {
     const entity = engine.addEntity()

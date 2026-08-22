@@ -129,6 +129,17 @@ export const LATTICE = {
 
   /** Radius of the ring the links arrange themselves around. */
   RADIUS_M: 3.2,
+  /**
+   * How the anchor grows with accumulated history.
+   *
+   * Logarithmic on purpose. Linear growth would either be invisible at ten
+   * handshakes or breach the scene height limit at ten thousand; a log curve
+   * stays legible across both. The cap keeps it comfortably under the
+   * single-parcel ceiling of log2(n+1)x20 = 20 m.
+   */
+  GROWTH_PER_DECADE_M: 2.4,
+  MAX_ANCHOR_HEIGHT_M: 14,
+
   /** Vertical span the lattice climbs as it fills. */
   HEIGHT_M: 4.0,
   LINK_THICKNESS: 0.12,

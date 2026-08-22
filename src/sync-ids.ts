@@ -26,6 +26,16 @@
  * the ~13 KB message cap (which drops messages SILENTLY) and the server's 256 MB
  * isolate ceiling.
  */
+/**
+ * A single entity carrying world-wide totals.
+ *
+ * The lattice renders at most LINK_SLOT_COUNT links, so counting rendered slots
+ * caps the visible total at 60 no matter how popular the world becomes. The real
+ * figure has to travel separately, or a successful world reports the same number
+ * forever.
+ */
+export const STATS_SLOT_ID = 1000
+
 export const HAND_SLOT_BASE = 1100
 export const HAND_SLOT_COUNT = 24
 
@@ -64,6 +74,7 @@ export function assertSyncIdsValid(): void {
     seen.add(value)
   }
 
+  claim(STATS_SLOT_ID, 'STATS_SLOT')
   for (let i = 0; i < HAND_SLOT_COUNT; i++) claim(handSlotId(i), `HAND_SLOT[${i}]`)
   for (let i = 0; i < LINK_SLOT_COUNT; i++) claim(linkSlotId(i), `LINK_SLOT[${i}]`)
 }

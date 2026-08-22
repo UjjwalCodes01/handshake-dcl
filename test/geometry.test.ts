@@ -1,6 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { ECHOES, HANDS, HANDSHAKE, LATTICE, SCENE } from '../src/config.ts'
+import { anchorHeight } from '../src/placement.ts'
+
+const scene = JSON.parse(readFileSync(new URL('../scene.json', import.meta.url), 'utf8'))
 import { HAND_SLOT_COUNT, LINK_SLOT_COUNT, assertSyncIdsValid, handSlotId, linkSlotId } from '../src/sync-ids.ts'
 
 /** Half the parcel; anything further from centre falls outside scene bounds. */
@@ -77,5 +81,49 @@ test('echo puzzle has a colour for every pillar', () => {
 test('echo sequences never ask for a pillar that does not exist', () => {
   for (const length of ECHOES.ROUND_LENGTHS) {
     assert.ok(length > 0, 'a round with no steps would complete instantly')
+  }
+})
+
+// ---------- scalability: the world must stay legal when it succeeds ----------
+
+test('the anchor never breaches the scene height limit, at any scale', () => {
+  // Height cap for one parcel is log2(n+1)x20 = 20 m. Exceeding it is a soft
+  // limit — a Creator Hub warning and a rendering cost, not a deploy failure —
+  // but a scene that quietly outgrows its own parcel as it succeeds is exactly
+  // the kind of thing nobody notices until it is popular.
+  const LIMIT = Math.log2(scene.scene.parcels.length + 1) * 20
+  for (const total of [0, 1, 10, 100, 1_000, 100_000, 10_000_000, Number.MAX_SAFE_INTEGER]) {
+    const h = anchorHeight(total, LATTICE.HEIGHT_M, LATTICE.GROWTH_PER_DECADE_M, LATTICE.MAX_ANCHOR_HEIGHT_M)
+    assert.ok(Number.isFinite(h), `height not finite for total=${total}`)
+    assert.ok(h <= LATTICE.MAX_ANCHOR_HEIGHT_M, `height ${h} exceeded its own cap at total=${total}`)
+    assert.ok(h < LIMIT, `height ${h} breaches the ${LIMIT} m parcel limit at total=${total}`)
+  }
+})
+
+test('the anchor grows monotonically with history', () => {
+  // A world with more handshakes must never look less established than one with
+  // fewer — that is the entire signal this conveys to an arriving visitor.
+  let previous = -Infinity
+  for (const total of [0, 1, 5, 50, 500, 5_000, 50_000]) {
+    const h = anchorHeight(total, LATTICE.HEIGHT_M, LATTICE.GROWTH_PER_DECADE_M, LATTICE.MAX_ANCHOR_HEIGHT_M)
+    assert.ok(h >= previous, `height went backwards at total=${total}`)
+    previous = h
+  }
+})
+
+test('anchor growth is visible across the range that matters', () => {
+  // A curve that is technically correct but visually flat conveys nothing.
+  const at = (n: number) =>
+    anchorHeight(n, LATTICE.HEIGHT_M, LATTICE.GROWTH_PER_DECADE_M, LATTICE.MAX_ANCHOR_HEIGHT_M)
+  assert.ok(at(10) - at(0) > 1, 'a world with ten handshakes looks the same as an empty one')
+  assert.ok(at(1000) - at(10) > 1, 'a busy world looks the same as a quiet one')
+})
+
+test('a nonsensical total falls back to the base height', () => {
+  for (const bad of [NaN, -1, -Infinity]) {
+    assert.equal(
+      anchorHeight(bad, LATTICE.HEIGHT_M, LATTICE.GROWTH_PER_DECADE_M, LATTICE.MAX_ANCHOR_HEIGHT_M),
+      LATTICE.HEIGHT_M
+    )
   }
 })

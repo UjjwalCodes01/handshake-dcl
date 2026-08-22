@@ -48,6 +48,18 @@ export const HandshakeLink = engine.defineComponent('handshake:link', {
 })
 
 /**
+ * World-wide totals, server-owned.
+ *
+ * Separate from the link slots because those are a bounded RENDER budget, not a
+ * record of everything that ever happened. A world with ten thousand handshakes
+ * still shows sixty links — but it should still say ten thousand.
+ */
+export const WorldStats = engine.defineComponent('handshake:stats', {
+  /** Every handshake ever completed here, including those recycled out of view. */
+  totalHandshakes: Schemas.Int
+})
+
+/**
  * A player's live offer to shake hands with someone who is present right now.
  *
  * This one is genuinely peer-owned: each client writes only its own, so the tap

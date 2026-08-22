@@ -1,6 +1,7 @@
 import { engine, Transform, MeshRenderer, MeshCollider, Material, Entity } from '@dcl/sdk/ecs'
 import { Color4, Vector3 } from '@dcl/sdk/math'
 import { COLORS, LATTICE, SCENE } from '../config'
+import { anchorHeight } from '../placement'
 
 /**
  * Builds the static scene.
@@ -13,6 +14,8 @@ import { COLORS, LATTICE, SCENE } from '../config'
 let anchor: Entity | undefined
 /** Last brightness step written, so the anchor is not rewritten every tick. */
 let anchorStep = -1
+/** Last height written, in decimetres, so growth writes only when it changes. */
+let anchorHeightDm = -1
 
 export function createWorld(): void {
   createGround()
@@ -29,21 +32,49 @@ export function createWorld(): void {
  * Written in discrete steps rather than continuously, so this costs one material
  * write per threshold crossed instead of one per tick (AGENTS.md §7).
  */
-export function updateBeacon(linkCount: number): void {
+export function updateBeacon(total: number): void {
   if (anchor === undefined) return
 
-  const step = linkCount === 0 ? 0 : linkCount < 5 ? 1 : linkCount < 15 ? 2 : linkCount < 40 ? 3 : 4
-  if (step === anchorStep) return
-  anchorStep = step
+  // --- brightness: coarse steps, so this writes rarely ---
+  const step = total === 0 ? 0 : total < 5 ? 1 : total < 15 ? 2 : total < 40 ? 3 : 4
+  if (step !== anchorStep) {
+    anchorStep = step
+    const intensity = 0.35 + step * 0.9
+    const tint = step === 0 ? COLORS.ANCHOR : COLORS.LINK
+    Material.setPbrMaterial(anchor, {
+      albedoColor: Color4.create(tint.r, tint.g, tint.b, 1),
+      emissiveColor: Color4.create(tint.r, tint.g, tint.b, 1),
+      emissiveIntensity: intensity,
+      roughness: 0.5
+    })
+  }
 
-  const intensity = 0.35 + step * 0.9
-  const tint = step === 0 ? COLORS.ANCHOR : COLORS.LINK
-  Material.setPbrMaterial(anchor, {
-    albedoColor: Color4.create(tint.r, tint.g, tint.b, 1),
-    emissiveColor: Color4.create(tint.r, tint.g, tint.b, 1),
-    emissiveIntensity: intensity,
-    roughness: 0.5
-  })
+  // --- height: the world's whole history, made physical ---
+  //
+  // The lattice can only ever show LINK_SLOT_COUNT links, so on its own the
+  // scene looks identical at 60 handshakes and at 60,000. The anchor carries
+  // what the ring cannot: it keeps rising, logarithmically, so the difference
+  // between a new world and a well-used one is visible on arrival.
+  //
+  // Quantised to decimetres so a busy world does not rewrite the Transform on
+  // every handshake.
+  const grown = anchorHeight(
+    total,
+    LATTICE.HEIGHT_M,
+    LATTICE.GROWTH_PER_DECADE_M,
+    LATTICE.MAX_ANCHOR_HEIGHT_M
+  )
+  const dm = Math.round(grown * 10)
+  if (dm === anchorHeightDm) return
+  anchorHeightDm = dm
+
+  const height = dm / 10
+  const transform = Transform.getMutableOrNull(anchor)
+  if (transform) {
+    transform.scale = Vector3.create(0.35, height, 0.35)
+    // Keep the base planted on the ground as it grows.
+    transform.position = Vector3.create(SCENE.CENTRE.x, height / 2, SCENE.CENTRE.z)
+  }
 }
 
 function createGround(): void {

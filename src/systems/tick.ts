@@ -1,7 +1,7 @@
 import { HANDSHAKE } from '../config'
 import { scanProximity } from './proximity'
 import { resolveHandshakes } from './handshake'
-import { getLinkCount, renderLattice } from './lattice'
+import { getTotalHandshakes, renderLattice } from './lattice'
 import { renderPendingHands } from './pendingHands'
 import { sessionTick } from '../net/session'
 import { updateBeacon } from '../entities/world'
@@ -37,6 +37,6 @@ export function tickSystem(dt: number): void {
   resolveHandshakes()
   renderPendingHands()
   renderLattice()
-  updateBeacon(getLinkCount())
+  updateBeacon(getTotalHandshakes())
   echoesSystem(elapsed)
 }

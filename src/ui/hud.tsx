@@ -4,7 +4,7 @@ import { COLORS } from '../config'
 import { getSelfAddress } from '../net/identity'
 import { getEngagedAddress } from '../systems/proximity'
 import { isPairOnCooldown, offerHandshake } from '../systems/handshake'
-import { getLinkCount, getLinkReading, isLinkedWith } from '../systems/lattice'
+import { getLinkReading, getTotalHandshakes, isLinkedWith } from '../systems/lattice'
 import {
   completeReachableHand,
   extendHand,
@@ -240,7 +240,7 @@ const Hud = () => {
   // Nobody has ever completed a handshake here and no hands are waiting. The
   // player is genuinely first — which deserves to feel like an event rather
   // than an empty room.
-  const isFirstEver = isConnected() && getLinkCount() === 0 && getPendingCount() === 0
+  const isFirstEver = isConnected() && getTotalHandshakes() === 0 && getPendingCount() === 0
   const watching = isPlayingBack()
   const resolving = isResolving()
   const puzzleActive = watching || resolving || isAwaitingInput()
@@ -266,7 +266,7 @@ const Hud = () => {
           uiBackground={{ color: PANEL }}
         >
           <Label
-            value={counterLabel(hasEarnedMark(), getLinkCount())}
+            value={counterLabel(hasEarnedMark(), getTotalHandshakes())}
             fontSize={34}
             color={flashing ? ACCENT : WHITE}
             textAlign="middle-center"
