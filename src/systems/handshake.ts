@@ -5,6 +5,7 @@ import { HANDSHAKE } from '../config'
 import { getSelfAddress, normalizeAddress, pairKey } from '../net/identity'
 import { room } from '../net/protocol'
 import { getEngagedAddress, isPresent } from './proximity'
+import { OfferTracker, PairCooldowns } from './offers'
 import { isLinkedWith } from './lattice'
 
 /** Our own intent entity. Created once, after identity resolves. */
@@ -19,27 +20,13 @@ let myOfferAt = 0
 let myOfferTarget = ''
 
 /**
- * Last observed `seq` per remote player, plus the LOCAL time we first saw it.
+ * What every peer is currently offering, and which pairs are cooling down.
  *
- * This is the crux of the no-server design. We never compare a remote client's
- * timestamp to ours — there is no shared clock, and phone clocks routinely
- * differ by seconds, which would make a 3 s window fire at random. Instead we
- * detect "this player issued a NEW offer" by watching their own seq change,
- * then measure that offer's age against OUR clock from the moment we saw it.
+ * The logic lives in ./offers so it can be executed and tested outside the
+ * sandbox — it decides whether the scene's central mechanic fires at all.
  */
-type RemoteOffer = {
-  seq: number
-  target: string
-  /**
-   * Local clock time we saw this offer become NEW. Zero means "seen, but we
-   * never witnessed it being made", which never counts as fresh.
-   */
-  observedAt: number
-}
-const remoteOffers = new Map<string, RemoteOffer>()
-
-/** pairKey -> local clock time the pair last completed a handshake. */
-const pairCooldowns = new Map<string, number>()
+const remoteOffers = new OfferTracker(HANDSHAKE.WINDOW_MS)
+const pairCooldowns = new PairCooldowns(HANDSHAKE.PAIR_COOLDOWN_MS)
 
 /** Fired when a handshake completes, so UI/audio can react. */
 type CompletionListener = (partner: string, isNew: boolean) => void
@@ -51,33 +38,12 @@ export function onHandshakeComplete(cb: CompletionListener): void {
 
 /** True when a live offer from `address` is currently pointed at us. */
 export function hasIncomingOffer(address: string): boolean {
-  const self = getSelfAddress()
-  if (!self) return false
-  const offer = remoteOffers.get(address)
-  if (!offer) return false
-  if (offer.observedAt === 0) return false // seen, but never witnessed being made
-  if (offer.target !== self) return false
-  return Date.now() - offer.observedAt <= HANDSHAKE.WINDOW_MS
+  return remoteOffers.hasIncomingOffer(address, getSelfAddress(), Date.now())
 }
 
 /** True if this pair completed a handshake too recently to do it again. */
 export function isPairOnCooldown(self: string, other: string): boolean {
-  const last = pairCooldowns.get(pairKey(self, other))
-  if (last === undefined) return false
-  return Date.now() - last < HANDSHAKE.PAIR_COOLDOWN_MS
-}
-
-/**
- * Drops expired cooldown entries.
- *
- * Without this the map keeps one entry per pair for the lifetime of the session.
- * A busy world would accumulate them indefinitely inside a memory budget that is
- * already tight on a low-end phone.
- */
-function prunePairCooldowns(now: number): void {
-  for (const [key, at] of pairCooldowns) {
-    if (now - at >= HANDSHAKE.PAIR_COOLDOWN_MS) pairCooldowns.delete(key)
-  }
+  return pairCooldowns.isOnCooldown(self, other, Date.now())
 }
 
 /**
@@ -159,33 +125,12 @@ export function resolveHandshakes(): void {
   for (const [, intent] of engine.getEntitiesWith(HandshakeIntent)) {
     const owner = normalizeAddress(intent.owner)
     if (!owner || owner === self) continue
-    const previous = remoteOffers.get(owner)
-    if (previous === undefined) {
-      // FIRST sighting. We have no idea how old this offer is — the player may
-      // have tapped a minute ago, before we were even in the scene. Recording it
-      // as fresh would let a stale, "sticky" offer complete a handshake without
-      // that player consenting at this moment, which breaks the entire premise
-      // of mutual confirmation. Remember the seq, but never treat it as fresh.
-      remoteOffers.set(owner, {
-        seq: intent.seq,
-        target: normalizeAddress(intent.target),
-        observedAt: 0
-      })
-    } else if (previous.seq !== intent.seq) {
-      // We WITNESSED the transition, so we know it was made just now.
-      remoteOffers.set(owner, {
-        seq: intent.seq,
-        target: normalizeAddress(intent.target),
-        observedAt: now
-      })
-    }
+    remoteOffers.observe(owner, intent.seq, normalizeAddress(intent.target), now)
   }
 
   // 2. Drop offers from players who have left, so a departed player's stale
   //    offer can never complete a handshake with nobody.
-  for (const [address] of remoteOffers) {
-    if (!isPresent(address)) remoteOffers.delete(address)
-  }
+  remoteOffers.prune(isPresent)
 
   // 3. Expire our own offer once its window closes.
   if (myOfferTarget && now - myOfferAt > HANDSHAKE.WINDOW_MS) {
@@ -210,8 +155,8 @@ export function resolveHandshakes(): void {
 
   // Record the cooldown on BOTH clients so neither side immediately re-offers
   // while the link is still replicating.
-  pairCooldowns.set(pairKey(self, partner), now)
-  prunePairCooldowns(now)
+  pairCooldowns.record(self, partner, now)
+  pairCooldowns.prune(now)
 
   // Both sides report. The server de-duplicates by pair, so the second report
   // is rejected harmlessly — that is far safer than electing one reporter and
