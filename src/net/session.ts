@@ -4,6 +4,7 @@ import { CONNECT } from '../config'
 import { Action, Reason, room } from './protocol'
 import { getSelfAddress } from './identity'
 import { PendingRequests } from './pending'
+import { playHandshakeEmote } from '../systems/emote'
 import { clearAllInFlight, clearInFlight, getLastRequestedSlot } from '../systems/pendingHands'
 
 /**
@@ -27,6 +28,8 @@ let waitingFor = 0
 let answeredWhileAway = 0
 let answeredRemainingS = 0
 let hasHandOut = false
+/** How many people this player has connected with, ever. Server-reported. */
+let yourCount = 0
 /**
  * The unconfirmed "I left a hand" claim.
  *
@@ -64,6 +67,16 @@ export function playerHasHandOut(): boolean {
 }
 
 /**
+ * This player's own lifetime connection count.
+ *
+ * A world total says the place is busy; your own number is the one you come
+ * back to change.
+ */
+export function getYourCount(): number {
+  return yourCount
+}
+
+/**
  * Optimistic local flag so the button reacts instantly to a tap. The server is
  * authoritative and corrects this on the reply, and again on the next joinAck.
  */
@@ -80,6 +93,7 @@ export function installSessionHandlers(): void {
     waitingFor = 0
     pending.resolve(HAND_OUT)
     hasHandOut = data.hasHandOut
+    yourCount = data.yourCount
     if (data.answered > 0) {
       answeredWhileAway = data.answered
       answeredRemainingS = ANSWERED_BANNER_S
@@ -90,6 +104,8 @@ export function installSessionHandlers(): void {
     // Any reply at all proves the server is alive and listening.
     connected = true
     waitingFor = 0
+    // Never let a stale reply walk the count backwards.
+    if (data.yourCount > yourCount) yourCount = data.yourCount
 
     // The server tells us which request this answers, so we never infer our own
     // state from an ambiguous reply.
@@ -110,6 +126,12 @@ export function installSessionHandlers(): void {
     if (data.ok && data.action === Action.LIVE) {
       hasHandOut = false
       pending.resolve(HAND_OUT)
+    }
+
+    // Completing a stranger's waiting hand deserves the same acknowledgement as
+    // a live handshake — it is the same act, just across time.
+    if (data.ok && data.action === Action.COMPLETE) {
+      playHandshakeEmote(Date.now())
     }
 
     if (data.reason === Reason.NOT_READY) {
@@ -175,5 +197,6 @@ export function resetSession(): void {
   answeredWhileAway = 0
   answeredRemainingS = 0
   hasHandOut = false
+  yourCount = 0
   pending.clear()
 }

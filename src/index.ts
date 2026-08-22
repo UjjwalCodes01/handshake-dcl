@@ -9,6 +9,7 @@ import { onHandshakeComplete } from './systems/handshake'
 import { installSessionHandlers } from './net/session'
 import { startServer } from './server'
 import { flashSuccess, setupUi } from './ui/hud'
+import { playHandshakeEmote } from './systems/emote'
 
 /**
  * Scene entry point.
@@ -41,6 +42,9 @@ export function main(): void {
 
   onHandshakeComplete(() => {
     flashSuccess()
+    // The avatar acknowledges the other person. A counter is information; a
+    // gesture is what they actually see.
+    playHandshakeEmote(Date.now())
   })
 
   setupUi()

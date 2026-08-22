@@ -27,7 +27,14 @@ import {
   lastAnswerWasCorrect,
   getReachablePillar
 } from '../systems/echoes'
-import { getAnsweredWhileAway, isConnected, isWaking, markHandExtended, playerHasHandOut } from '../net/session'
+import {
+  getAnsweredWhileAway,
+  getYourCount,
+  isConnected,
+  isWaking,
+  markHandExtended,
+  playerHasHandOut
+} from '../net/session'
 
 let flashUntil = 0
 
@@ -145,13 +152,16 @@ let rollText = ''
  * Rebuilt only when the published roll changes. react-ecs re-renders every
  * frame, so composing these strings inline would allocate continuously.
  */
-function rollLabel(entries: readonly { name: string; count: number }[]): string {
-  const key = entries.map((e) => `${e.name}:${e.count}`).join('|')
+function rollLabel(entries: readonly { name: string; count: number }[], yours: number): string {
+  const key = `${entries.map((e) => `${e.name}:${e.count}`).join('|')}#${yours}`
   if (key !== rollKey) {
     rollKey = key
-    rollText = entries
-      .map((e, i) => `${i + 1}. ${e.name || GLYPH_ANON}  ${GLYPH_HANDSHAKE} ${e.count}`)
-      .join('\n')
+    const rows = entries.map((e, i) => `${i + 1}. ${e.name || GLYPH_ANON}  ${GLYPH_HANDSHAKE} ${e.count}`)
+    // Your own standing, always last and always present — the roll should mean
+    // something personal even when you are nowhere near the top of it.
+    rows.push('')
+    rows.push(`${GLYPH_ROLL} ${GLYPH_HANDSHAKE} ${yours}`)
+    rollText = rows.join('\n')
   }
   return rollText
 }
@@ -359,13 +369,13 @@ const Hud = () => {
               positionType: 'absolute',
               position: { top: '13%', left: '18%' },
               width: '64%',
-              height: '26%',
+              height: '32%',
               justifyContent: 'center',
               alignItems: 'center'
             }}
             uiBackground={{ color: PANEL }}
           >
-            <Label value={rollLabel(roll)} fontSize={24} color={WHITE} textAlign="middle-center" />
+            <Label value={rollLabel(roll, getYourCount())} fontSize={24} color={WHITE} textAlign="middle-center" />
           </UiEntity>
         ) : null}
 

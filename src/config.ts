@@ -119,6 +119,25 @@ export const ECHOES = {
   ]
 } as const
 
+export const EMOTE = {
+  /**
+   * Played when a handshake completes.
+   *
+   * A wave, not a cheer: this is two strangers acknowledging each other, and the
+   * gesture should read as greeting rather than victory. Valid predefined emote
+   * names are fixed by the client — 'wave' is among them.
+   */
+  ON_HANDSHAKE: 'wave',
+
+  /**
+   * Minimum gap between triggered emotes, in milliseconds.
+   *
+   * Without it, completing several handshakes in quick succession would restart
+   * the animation repeatedly and the avatar would twitch instead of wave.
+   */
+  COOLDOWN_MS: 4000
+} as const
+
 export const LATTICE = {
   /**
    * Hard cap on simultaneously rendered link entities.

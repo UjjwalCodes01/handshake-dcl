@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const scene = JSON.parse(readFileSync(join(ROOT, 'scene.json'), 'utf8'))
+const scene = JSON.parse(readFileSync(join(ROOT, 'scene.json'), 'utf8')) as Record<string, any>
 
 test('a world name is configured', () => {
   assert.ok(scene.worldConfiguration?.name, 'worldConfiguration.name is missing')
@@ -63,4 +63,24 @@ test('parcels are declared and the base is one of them', () => {
   const parcels: string[] = scene.scene?.parcels ?? []
   assert.ok(parcels.length > 0, 'no parcels declared')
   assert.ok(parcels.includes(scene.scene.base), `base ${scene.scene.base} is not among the parcels`)
+})
+
+test('the emote permission is declared', () => {
+  // triggerEmote FAILS SILENTLY without this. No error, no log — the avatar
+  // simply never reacts, and nothing in a typecheck or a build would show it.
+  const perms: string[] = scene.requiredPermissions ?? []
+  assert.ok(
+    perms.includes('ALLOW_TO_TRIGGER_AVATAR_EMOTE'),
+    'scene.json is missing ALLOW_TO_TRIGGER_AVATAR_EMOTE, so handshake emotes will never play'
+  )
+})
+
+test('only permissions the scene actually uses are requested', () => {
+  // Every extra permission is something a player is asked to trust the scene
+  // with. Requesting one we never call is a cost with no benefit.
+  const perms: string[] = scene.requiredPermissions ?? []
+  const known = ['ALLOW_TO_TRIGGER_AVATAR_EMOTE']
+  for (const p of perms) {
+    assert.ok(known.includes(p), `scene.json requests ${p}, which nothing in src uses`)
+  }
 })

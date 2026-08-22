@@ -56,5 +56,8 @@
     "voiceChat": "enabled",
     "portableExperiences": "disabled"
   },
-  "authoritativeMultiplayer": true
+  "authoritativeMultiplayer": true,
+  "requiredPermissions": [
+    "ALLOW_TO_TRIGGER_AVATAR_EMOTE"
+  ]
 }

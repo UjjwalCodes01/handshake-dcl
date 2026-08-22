@@ -29,6 +29,7 @@ import {
   getLinks,
   creditConnection,
   expireHands,
+  getConnectionCount,
   getDisplayName,
   getTopConnectors,
   getTotalHandshakes,
@@ -106,7 +107,11 @@ function rateLimited(address: string): boolean {
 }
 
 function reply(address: string, action: string, ok: boolean, reason: string, live = false): void {
-  room.send('actionResult', { action, ok, reason, live }, { to: [address] })
+  room.send(
+    'actionResult',
+    { action, ok, reason, live, yourCount: getConnectionCount(address) },
+    { to: [address] }
+  )
 }
 
 /** Server-verified position. Never trust a client-reported one. */
@@ -326,7 +331,8 @@ function handleJoin(sender: string, displayName: string): void {
     {
       totalLinks: getTotalHandshakes(),
       answered: consumeAnswered(sender),
-      hasHandOut: findHandSlotOf(sender) !== -1
+      hasHandOut: findHandSlotOf(sender) !== -1,
+      yourCount: getConnectionCount(sender)
     },
     { to: [sender] }
   )

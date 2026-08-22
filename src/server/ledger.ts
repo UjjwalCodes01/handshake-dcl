@@ -51,6 +51,11 @@ const linkedPairs = new Set<string>()
 /** Lifetime connection counts, persisted. See ./ranking for why it is bounded. */
 let connectors = new Map<string, Connector>()
 
+/** How many people this player has connected with, ever. */
+export function getConnectionCount(address: string): number {
+  return connectors.get(address)?.count ?? 0
+}
+
 export function getTopConnectors(limit: number): Connector[] {
   return topConnectors(connectors, limit)
 }

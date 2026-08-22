@@ -44,7 +44,14 @@ export const Messages = {
     /** How many hands this player left were answered while they were away. */
     answered: Schemas.Int,
     /** Whether this player currently has a hand extended. */
-    hasHandOut: Schemas.Boolean
+    hasHandOut: Schemas.Boolean,
+    /**
+     * How many people THIS player has connected with, ever.
+     *
+     * A world-wide total tells you the place is busy; your own number is the one
+     * you come back to change.
+     */
+    yourCount: Schemas.Int
   }),
   /** Outcome of extendHand / completeHand / reportLive. */
   actionResult: Schemas.Map({
@@ -56,6 +63,8 @@ export const Messages = {
      */
     action: Schemas.String,
     ok: Schemas.Boolean,
+    /** The sender's own connection count, so it updates without a rejoin. */
+    yourCount: Schemas.Int,
     /** Machine-readable reason. Never shown as text — the UI reacts visually. */
     reason: Schemas.String,
     live: Schemas.Boolean
