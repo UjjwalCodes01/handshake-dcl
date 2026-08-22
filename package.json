@@ -16,7 +16,8 @@
     "start:multi": "sdk-commands start --web --multi-instance",
     "test": "node --test \"test/*.test.ts\"",
     "build:prod": "sdk-commands build --production",
-    "preflight": "npm run build:prod && node tools/preflight.mjs"
+    "preflight": "npm run build:prod && node tools/preflight.mjs",
+    "verify": "npm run typecheck && npm test && npm run preflight"
   },
   "devDependencies": {
     "@dcl/js-runtime": "7.26.1-32239895147.commit-3c77d90",
@@ -31,5 +32,6 @@
     "singleQuote": true,
     "printWidth": 120,
     "trailingComma": "none"
-  }
+  },
+  "type": "module"
 }

@@ -14,7 +14,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           # The Multiplayer Server runtime declares engines ^22 || ^24, so CI
-          # runs the lower bound to prove the floor still works. 22.x also has
+          # runs the lower bound to prove the floor still works. 22.18+ also has
           # native TypeScript stripping, which the test suite relies on.
           node-version: 22
           cache: npm
@@ -30,11 +30,13 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      # Pure-logic tests: address normalisation, placement collisions, clock-skew
-      # clamping, and synced-id uniqueness. All are silent-corruption risks that
-      # produce no error when wrong, only quiet disagreement between clients.
+      # Pure-logic tests only. Nothing here may depend on build output: bin/ is
+      # gitignored, so on a fresh checkout it does not exist yet. A test that
+      # asserted otherwise is what broke this workflow's first run.
       - name: Test
         run: npm test
 
-      - name: Build
-        run: npm run build
+      # Production build plus the hard pre-deploy limits, so a change that would
+      # be rejected at publish time fails here instead.
+      - name: Preflight
+        run: npm run preflight

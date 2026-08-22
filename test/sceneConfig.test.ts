@@ -26,9 +26,15 @@ test('the world name is a plausible DCL name', () => {
   assert.ok(!name.includes(' '), 'world name contains a space')
 })
 
-test('the scene entry point exists', () => {
+test('the scene declares an entry point', () => {
+  // Checks the DECLARATION, not the artifact. bin/ is gitignored, so on a fresh
+  // clone the bundle does not exist until something builds it — and asserting
+  // otherwise made this suite fail on any machine that had not built yet, which
+  // is exactly what happened on CI's first run. Whether the bundle is actually
+  // present is a pre-deploy question, and `npm run preflight` answers it after
+  // running a production build.
   assert.ok(scene.main, 'scene.json has no "main"')
-  assert.ok(existsSync(join(ROOT, scene.main)), `${scene.main} does not exist — run npm run build`)
+  assert.match(scene.main, /\.js$/, `main should point at a built bundle, got "${scene.main}"`)
 })
 
 test('every referenced asset exists', () => {
