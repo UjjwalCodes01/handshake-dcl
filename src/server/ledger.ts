@@ -1,6 +1,10 @@
 import { HAND_SLOT_COUNT, LINK_SLOT_COUNT } from '../sync-ids'
 import { HANDS, SERVER } from '../config'
 import { loadAll, persist } from '../net/storage'
+import { parseConnectors, recordConnection, serialiseConnectors, topConnectors } from './ranking'
+import type { Connector } from './ranking'
+
+export type { Connector } from './ranking'
 import {
   chooseHandSlot,
   clampCursor,
@@ -31,6 +35,7 @@ const KEY_HANDS = 'v1:hands'
 const KEY_LINKS = 'v1:links'
 const KEY_STATS = 'v1:stats'
 const KEY_ANSWERED = 'v1:answered'
+const KEY_CONNECTORS = 'v1:connectors'
 
 /** Slot-indexed. A null entry is a free slot. */
 let hands: (HandRecord | null)[] = []
@@ -42,6 +47,20 @@ let totalHandshakes = 0
 let answered = new Map<string, number>()
 /** Pairs that have already linked, so the same two people cannot farm links. */
 const linkedPairs = new Set<string>()
+
+/** Lifetime connection counts, persisted. See ./ranking for why it is bounded. */
+let connectors = new Map<string, Connector>()
+
+export function getTopConnectors(limit: number): Connector[] {
+  return topConnectors(connectors, limit)
+}
+
+/** Credits both participants of a completed handshake. */
+export function creditConnection(a: string, aName: string, b: string, bName: string): void {
+  recordConnection(connectors, a, aName, SERVER.MAX_CONNECTORS)
+  recordConnection(connectors, b, bName, SERVER.MAX_CONNECTORS)
+  persist(KEY_CONNECTORS, serialiseConnectors(connectors, SERVER.MAX_CONNECTORS))
+}
 
 /** address -> display name, learned at join. Not persisted; cheap to relearn. */
 const displayNames = new Map<string, string>()
@@ -200,6 +219,7 @@ export async function loadLedger(): Promise<void> {
   linkCursor = 0
   totalHandshakes = 0
   answered = new Map<string, number>()
+  connectors = new Map<string, Connector>()
   linkedPairs.clear()
 
   // One host call for the whole ledger. Missing keys are simply absent from the
@@ -234,6 +254,7 @@ export async function loadLedger(): Promise<void> {
   }
 
   answered = parseAnswered(stored.get(KEY_ANSWERED) ?? null, SERVER.MAX_ANSWERED_ENTRIES)
+  connectors = parseConnectors(stored.get(KEY_CONNECTORS) ?? null, SERVER.MAX_CONNECTORS)
 }
 
 

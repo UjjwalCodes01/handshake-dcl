@@ -4,7 +4,7 @@ import { COLORS } from '../config'
 import { getSelfAddress } from '../net/identity'
 import { getEngagedAddress } from '../systems/proximity'
 import { isPairOnCooldown, offerHandshake } from '../systems/handshake'
-import { getLinkReading, getTotalHandshakes, isLinkedWith } from '../systems/lattice'
+import { getLinkReading, getTopConnectors, getTotalHandshakes, isAtAnchor, isLinkedWith } from '../systems/lattice'
 import {
   completeReachableHand,
   extendHand,
@@ -52,6 +52,7 @@ const GLYPH_WATCH = '\u{1F441}'
 const GLYPH_WIN = '\u{2714}'
 const GLYPH_LOSE = '\u{2716}'
 const GLYPH_MARK = '\u{2726}'
+const GLYPH_ROLL = '\u{1F517}'
 /** Filled/empty pips for wordless progress. */
 const PIP_FULL = '\u{25CF}'
 const PIP_EMPTY = '\u{25CB}'
@@ -134,6 +135,25 @@ function answeredLabel(count: number): string {
     answeredText = `${GLYPH_HANDSHAKE} +${count}`
   }
   return answeredText
+}
+
+let rollKey = ''
+let rollText = ''
+/**
+ * The roll of most-connected visitors, as one memoised block.
+ *
+ * Rebuilt only when the published roll changes. react-ecs re-renders every
+ * frame, so composing these strings inline would allocate continuously.
+ */
+function rollLabel(entries: readonly { name: string; count: number }[]): string {
+  const key = entries.map((e) => `${e.name}:${e.count}`).join('|')
+  if (key !== rollKey) {
+    rollKey = key
+    rollText = entries
+      .map((e, i) => `${i + 1}. ${e.name || GLYPH_ANON}  ${GLYPH_HANDSHAKE} ${e.count}`)
+      .join('\n')
+  }
+  return rollText
 }
 
 /** Hoisted so the waking label is not rebuilt every frame. */
@@ -237,6 +257,9 @@ const Hud = () => {
   const action = resolveAction(self)
   const waking = isWaking()
   const reading = getLinkReading()
+  const roll = getTopConnectors()
+  // Shown only while standing at the anchor, and only once somebody is on it.
+  const showRoll = isAtAnchor() && roll.length > 0 && !waking
   // Nobody has ever completed a handshake here and no hands are waiting. The
   // player is genuinely first — which deserves to feel like an event rather
   // than an empty room.
@@ -326,10 +349,30 @@ const Hud = () => {
           </UiEntity>
         ) : null}
 
+        {/* The roll of most-connected visitors — TOP CENTRE, at the anchor.
+            Ranks CONNECTIONS, not points: a scoreboard rewarding domination
+            would fight the premise, one rewarding meeting people rewards
+            exactly what the scene is for. */}
+        {showRoll ? (
+          <UiEntity
+            uiTransform={{
+              positionType: 'absolute',
+              position: { top: '13%', left: '18%' },
+              width: '64%',
+              height: '26%',
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}
+            uiBackground={{ color: PANEL }}
+          >
+            <Label value={rollLabel(roll)} fontSize={24} color={WHITE} textAlign="middle-center" />
+          </UiEntity>
+        ) : null}
+
         {/* Reading a link — who made it, and how long ago. TOP CENTRE.
             This is the solo player's content: the lattice is a record of real
             people, browsable on foot with nobody else online. */}
-        {reading !== null && !waking && !showingAnswered && !puzzleActive ? (
+        {reading !== null && !waking && !showingAnswered && !puzzleActive && !showRoll ? (
           <UiEntity
             uiTransform={{
               positionType: 'absolute',
@@ -351,7 +394,7 @@ const Hud = () => {
         ) : null}
 
         {/* First ever visitor — nothing has happened here yet. */}
-        {isFirstEver && !waking && reading === null && !puzzleActive ? (
+        {isFirstEver && !waking && reading === null && !puzzleActive && !showRoll ? (
           <UiEntity
             uiTransform={{
               positionType: 'absolute',
@@ -370,7 +413,7 @@ const Hud = () => {
         {/* "You were answered while away" — TOP CENTRE, below the counter.
             The single strongest reason to come back, so it is the first thing
             shown on return, wordlessly. */}
-        {showingAnswered && !waking && !puzzleActive ? (
+        {showingAnswered && !waking && !puzzleActive && !showRoll ? (
           <UiEntity
             uiTransform={{
               positionType: 'absolute',
@@ -388,7 +431,7 @@ const Hud = () => {
 
         {/* Waiting indicator — shown only while we have a hand out and nothing
             else to do, so a solo player still sees their own contribution. */}
-        {action === null && !waking && !showingAnswered && reading === null && !puzzleActive && playerHasHandOut() ? (
+        {action === null && !waking && !showingAnswered && reading === null && !puzzleActive && !showRoll && playerHasHandOut() ? (
           <UiEntity
             uiTransform={{
               positionType: 'absolute',

@@ -150,6 +150,13 @@ export const LATTICE = {
    * Deliberately smaller than the hand reach: the lattice is dense, and a
    * generous radius would flicker between neighbouring links as you walk.
    */
+  /**
+   * How close to the anchor you must stand to read the roll of most-connected
+   * visitors. Inside the lattice ring, so it is something you walk INTO — the
+   * structure representing accumulated history is where you see who built it.
+   */
+  ROLL_RANGE_M: 2.6,
+
   READ_RANGE_M: 2.6,
   READ_RELEASE_M: 3.4,
   /**
@@ -204,6 +211,11 @@ export const SERVER = {
    * forever with entries no one will ever collect, inside a 256 MB isolate.
    */
   MAX_ANSWERED_ENTRIES: 400,
+
+  /** How many visitors the most-connected table tracks before pruning. */
+  MAX_CONNECTORS: 200,
+  /** How many appear on the roll at the anchor. */
+  TOP_CONNECTORS_SHOWN: 5,
 
   /** How often expired hands are swept, in seconds. Housekeeping, not gameplay. */
   EXPIRY_SWEEP_INTERVAL_S: 120,

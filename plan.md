@@ -73,6 +73,7 @@ understood in **under 15 seconds**, in any language.
 | 3. Mobile UX pass | ✅ Code complete; **verified running on a real phone** |
 | 3b. Solo layer — explorable lattice | ✅ Code complete, **untested on device** |
 | 3c. Solo layer — Echoes puzzle | ✅ Code complete, **untested on device** |
+| 3d. Retention — the roll of most-connected | ✅ Code complete, **untested on device** |
 | 4. Performance pass | ◐ Static half done; **device measurement is yours** |
 | 5. Freeze | ⬜ |
 | 6. Polish + docs | ◐ README, LICENSE, CI, reproducible install ✅ · thumbnail ⬜ |
@@ -252,6 +253,32 @@ These are not preferences — they are things that **do not work on the target p
 > The `TextShape` one is the trap: it renders fine in desktop preview and wrong on a
 > phone, so it would have passed every test available on this machine and failed on
 > the only platform that counts.
+
+---
+
+## 5a. What the organisers' own reference scenes do
+
+Checked directly, rather than guessed (`github.com/dcl-regenesislabs`):
+
+| Reference scene | Runtime dependencies |
+|---|---|
+| cozy-farm, dead-surge, raft-game, venetian-hunt | **none** |
+| towerofmadness | `ethers` only |
+
+**Four of five ship zero runtime dependencies**, and `towerofmadness` uses the same
+`auth-server` SDK + `hammurabi-server` architecture as this scene. Our dependency
+profile already matches the reference. Adding libraries would move away from it —
+and `AGENTS.md` §4 is right that the QuickJS sandbox breaks most npm packages.
+
+`towerofmadness`'s own `src/` is the more useful signal: **four leaderboard files**
+(`Leaderboard`, `LeaderboardPanel`, `PointLeaderboard`, `TournamentLeaderboard`)
+and a `tutorial.ts`. Leaderboards are what the organisers treat as the retention
+mechanism, and **Retention & Discovery Value** is a judging criterion where this
+scene was weakest.
+
+Hence §3d: a roll of the most-connected visitors, shown at the anchor. It ranks
+**connections, not points** — a scoreboard rewarding domination would fight the
+premise; one rewarding meeting people rewards exactly what the scene is for.
 
 ---
 

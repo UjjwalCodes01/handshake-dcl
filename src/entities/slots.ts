@@ -28,7 +28,7 @@ export function getLinkSlots(): readonly Entity[] {
 }
 
 /** The empty value every slot starts at, on both server and client. */
-export const EMPTY_STATS = { totalHandshakes: 0 }
+export const EMPTY_STATS = { totalHandshakes: 0, topNames: [] as string[], topCounts: [] as number[] }
 export const EMPTY_HAND = { active: false, owner: '', ownerName: '', marked: false, seed: 0, createdAt: 0 }
 export const EMPTY_LINK = { active: false, a: '', b: '', aName: '', bName: '', live: false, seed: 0, createdAt: 0 }
 

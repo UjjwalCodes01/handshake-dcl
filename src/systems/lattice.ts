@@ -34,6 +34,20 @@ export function getTotalHandshakes(): number {
   return totalHandshakes
 }
 
+/** The most-connected visitors, as published by the server. */
+export type Connector = { name: string; count: number }
+let topConnectors: Connector[] = []
+let atAnchor = false
+
+export function getTopConnectors(): readonly Connector[] {
+  return topConnectors
+}
+
+/** True while the player is standing at the anchor, where the roll is shown. */
+export function isAtAnchor(): boolean {
+  return atAnchor
+}
+
 /**
  * Every pair that already has a link, rebuilt each tick from synced state.
  *
@@ -222,6 +236,22 @@ export function renderLattice(): void {
   const stats = statsEntity === undefined ? null : WorldStats.getOrNull(statsEntity)
   totalHandshakes = Math.max(stats?.totalHandshakes ?? 0, active)
 
+  // Rebuilt only when the published roll actually changes, so the HUD reads a
+  // stable array instead of a fresh one every tick.
+  const names = stats?.topNames ?? []
+  const counts = stats?.topCounts ?? []
+  if (names.length !== topConnectors.length || names.some((n, i) => n !== topConnectors[i]?.name || counts[i] !== topConnectors[i]?.count)) {
+    topConnectors = names.map((name, i) => ({ name, count: counts[i] ?? 0 }))
+  }
+
+  if (selfTransform) {
+    const dx = selfTransform.position.x - SCENE.CENTRE.x
+    const dz = selfTransform.position.z - SCENE.CENTRE.z
+    atAnchor = dx * dx + dz * dz <= LATTICE.ROLL_RANGE_M * LATTICE.ROLL_RANGE_M
+  } else {
+    atAnchor = false
+  }
+
   nearestSlot = readSlot
   nearestReading = readReading
 }
@@ -235,4 +265,6 @@ export function resetLattice(): void {
   nearestSlot = -1
   linkCount = 0
   totalHandshakes = 0
+  topConnectors = []
+  atAnchor = false
 }

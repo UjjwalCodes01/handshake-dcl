@@ -27,8 +27,10 @@ import {
   findHandSlotOf,
   getHands,
   getLinks,
+  creditConnection,
   expireHands,
   getDisplayName,
+  getTopConnectors,
   getTotalHandshakes,
   hasLinkedPair,
   loadLedger,
@@ -171,7 +173,12 @@ function publishLink(slot: number): void {
 function publishStats(): void {
   const entity = getStatsEntity()
   if (entity === undefined) return
-  WorldStats.createOrReplace(entity, { totalHandshakes: getTotalHandshakes() })
+  const top = getTopConnectors(SERVER.TOP_CONNECTORS_SHOWN)
+  WorldStats.createOrReplace(entity, {
+    totalHandshakes: getTotalHandshakes(),
+    topNames: top.map((c) => c.name),
+    topCounts: top.map((c) => c.count)
+  })
 }
 
 function publishAll(): void {
@@ -192,6 +199,8 @@ function completeLink(a: string, b: string, live: boolean): void {
     pairKey(lo, hi)
   )
   publishLink(slot)
+  // Both participants are credited: a handshake is not something one person does.
+  creditConnection(lo, getDisplayName(lo), hi, getDisplayName(hi))
   // The lattice shows at most LINK_SLOT_COUNT links; the total must keep rising.
   publishStats()
 }

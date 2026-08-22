@@ -56,7 +56,16 @@ export const HandshakeLink = engine.defineComponent('handshake:link', {
  */
 export const WorldStats = engine.defineComponent('handshake:stats', {
   /** Every handshake ever completed here, including those recycled out of view. */
-  totalHandshakes: Schemas.Int
+  totalHandshakes: Schemas.Int,
+  /**
+   * The most-connected visitors, strongest first — parallel arrays rather than a
+   * nested map, which keeps the synced payload small and flat.
+   *
+   * Ranks CONNECTIONS, not points. A scoreboard rewarding domination would fight
+   * the premise; one rewarding meeting people rewards what the scene is for.
+   */
+  topNames: Schemas.Array(Schemas.String),
+  topCounts: Schemas.Array(Schemas.Int)
 })
 
 /**
