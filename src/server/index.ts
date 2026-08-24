@@ -18,6 +18,7 @@ import {
 import { hashString } from '../hash'
 import { normalizeAddress, pairKey } from '../net/identity'
 import { Action, Reason, room } from '../net/protocol'
+import { LiveClaims, RateLimiter } from './guards'
 import { flushNow, flushStorage, getFailedKeys } from '../net/storage'
 import {
   addLink,
@@ -40,25 +41,13 @@ import {
   setHand
 } from './ledger'
 
-/** address -> timestamps of recent actions, for rate limiting. */
-const recentActions = new Map<string, number[]>()
-
 /**
- * One-sided live-handshake claims, awaiting the other party's own claim.
- *
- * HandshakeIntent is peer-owned by design — that is what makes the tap feel
- * instant without a server round-trip. But it also means a modified client can
- * write an intent carrying somebody ELSE's address as owner, manufacturing the
- * appearance of mutual consent. Acting on a single report would let a cheater
- * force a handshake with any player who merely happens to be standing nearby.
- *
- * So the server requires BOTH participants to independently claim the same pair
- * within a window. A forged intent produces only one real claim and never
- * completes. Honest play produces two, because both clients report.
- *
- * Keyed by pairKey, so the two directions collapse onto one entry.
+ * Anti-cheat. The logic lives in ./guards so it can be executed and tested —
+ * a mistake in either does not throw, it quietly lets someone forge a handshake
+ * or spend the world's whole storage budget.
  */
-const liveClaims = new Map<string, { from: string; at: number }>()
+const rateLimiter = new RateLimiter(SERVER.RATE_MAX_ACTIONS, SERVER.RATE_WINDOW_MS)
+const liveClaims = new LiveClaims(SERVER.LIVE_CLAIM_WINDOW_MS)
 let ready = false
 
 /**
@@ -85,25 +74,8 @@ function installWriteGuards(): void {
   )
 }
 
-/**
- * Token-bucket rate limit.
- *
- * The transport already drops peers exceeding ~300 messages/sec, but that is a
- * transport protection, not a gameplay one: a scripted client well under that
- * rate could still spam handshake claims. This bounds the damage and, just as
- * importantly, bounds how many Storage writes a single player can trigger.
- */
 function rateLimited(address: string): boolean {
-  const now = Date.now()
-  const window = recentActions.get(address) ?? []
-  const recent = window.filter((t) => now - t < SERVER.RATE_WINDOW_MS)
-  if (recent.length >= SERVER.RATE_MAX_ACTIONS) {
-    recentActions.set(address, recent)
-    return true
-  }
-  recent.push(now)
-  recentActions.set(address, recent)
-  return false
+  return rateLimiter.check(address, Date.now())
 }
 
 function reply(address: string, action: string, ok: boolean, reason: string, live = false): void {
@@ -284,24 +256,18 @@ function handleReportLive(sender: string, rawPartner: string): void {
   }
 
   // Require an independent claim from the other side before creating anything.
-  const key = pairKey(sender, partner)
-  const existing = liveClaims.get(key)
   const now = Date.now()
+  const corroborating = liveClaims.claim(sender, partner, now)
 
-  if (!existing || existing.from === sender || now - existing.at > SERVER.LIVE_CLAIM_WINDOW_MS) {
-    // Either the first claim for this pair, a repeat from the same player, or a
-    // stale one. Record ours and wait for the partner to corroborate.
-    liveClaims.set(key, { from: sender, at: now })
+  if (!corroborating) {
     reply(sender, Action.LIVE, false, Reason.PENDING)
-    pruneClaims(now)
+    liveClaims.prune(now)
     return
   }
 
-  // Corroborated: two different players, same pair, inside the window.
-  liveClaims.delete(key)
   completeLink(sender, partner, true)
   // Tell the partner too — they are waiting on a PENDING of their own.
-  reply(existing.from, Action.LIVE, true, Reason.OK, true)
+  reply(corroborating.from, Action.LIVE, true, Reason.OK, true)
   // If either side had a hand extended, consume it — they have now met in person.
   for (const address of [sender, partner]) {
     const slot = findHandSlotOf(address)
@@ -311,13 +277,6 @@ function handleReportLive(sender: string, rawPartner: string): void {
     }
   }
   reply(sender, Action.LIVE, true, Reason.OK, true)
-}
-
-/** Drops stale one-sided claims so the map cannot grow across a long session. */
-function pruneClaims(now: number): void {
-  for (const [key, claim] of liveClaims) {
-    if (now - claim.at > SERVER.LIVE_CLAIM_WINDOW_MS) liveClaims.delete(key)
-  }
 }
 
 function handleJoin(sender: string, displayName: string): void {
@@ -424,13 +383,11 @@ export function startServer(): void {
   // their contribution to a later restart.
   onLeaveScene((userId) => {
     const address = normalizeAddress(userId)
-    recentActions.delete(address)
+    rateLimiter.forget(address)
     forgetDisplayName(address)
     // A player who leaves mid-exchange must not leave a claim that a returning
     // player could corroborate minutes later.
-    for (const [key, claim] of liveClaims) {
-      if (claim.from === address) liveClaims.delete(key)
-    }
+    liveClaims.forget(address)
     // A departing player is a natural checkpoint. Critically, the server itself
     // shuts down about two minutes after the LAST player leaves, so anything
     // still queued at that point is gone for good.
