@@ -42,8 +42,14 @@ No instructions, no tutorial, no text to read. One button, one tap.
 | ◆ A floating mark, on your first visit only | Walk to it. It points at the nearest hand you can answer, and vanishes once you have shaken one |
 | The lattice in the centre | Stand near any link to see who made it, and how long ago |
 
-The central pillar brightens as the lattice fills, so you can tell at a glance whether this
-place has a history.
+The central pillar brightens *and grows taller* as the lattice fills, so you can tell at a
+glance whether this place has a history.
+
+**The world runs on Decentraland's shared clock.** In daylight the ground is legible and the
+lattice is one bright object among many. After dark the ground falls away and the lattice
+becomes the only light in the scene — which is when a structure built entirely out of other
+people's handshakes looks like what it is. Because the clock is coordinated across players,
+everyone standing there sees the same sky at the same moment.
 
 ---
 

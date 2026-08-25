@@ -11,15 +11,47 @@ import { anchorHeight } from '../placement'
  * that static Transforms and MeshRenderers must never be sync targets. Syncing
  * them would spend network budget to replicate values both sides already know.
  */
+let ground: Entity | undefined
 let anchor: Entity | undefined
+/** Emissive multiplier from the day/night cycle. See systems/daylight.ts. */
+let glow = 1
+/** Last ground tint written, so it is touched only when the mood changes. */
+let groundStep = -1
 /** Last brightness step written, so the anchor is not rewritten every tick. */
 let anchorStep = -1
 /** Last height written, in decimetres, so growth writes only when it changes. */
 let anchorHeightDm = -1
 
 export function createWorld(): void {
-  createGround()
+  ground = createGround()
   anchor = createAnchor()
+}
+
+/**
+ * Applies the shared day/night mood.
+ *
+ * Called only when the mood STEP changes, not every tick — the ground is the
+ * largest surface in the scene and rewriting its material continuously would be
+ * exactly the per-frame mutation everything else here avoids.
+ */
+export function applyDaylight(
+  step: number,
+  groundTint: { r: number; g: number; b: number },
+  glowMultiplier: number
+): void {
+  glow = glowMultiplier
+
+  if (step !== groundStep && ground !== undefined) {
+    groundStep = step
+    Material.setPbrMaterial(ground, {
+      albedoColor: Color4.create(groundTint.r, groundTint.g, groundTint.b, 1),
+      roughness: 0.9,
+      metallic: 0
+    })
+  }
+
+  // Force the anchor to repaint at the new glow on the next beacon update.
+  anchorStep = -1
 }
 
 /**
@@ -44,7 +76,7 @@ export function updateBeacon(total: number): void {
     Material.setPbrMaterial(anchor, {
       albedoColor: Color4.create(tint.r, tint.g, tint.b, 1),
       emissiveColor: Color4.create(tint.r, tint.g, tint.b, 1),
-      emissiveIntensity: intensity,
+      emissiveIntensity: intensity * glow,
       roughness: 0.5
     })
   }
@@ -77,19 +109,20 @@ export function updateBeacon(total: number): void {
   }
 }
 
-function createGround(): void {
-  const ground = engine.addEntity()
-  Transform.create(ground, {
+function createGround(): Entity {
+  const surface = engine.addEntity()
+  Transform.create(surface, {
     position: Vector3.create(SCENE.CENTRE.x, 0, SCENE.CENTRE.z),
     scale: Vector3.create(SCENE.GROUND_SIZE, 0.1, SCENE.GROUND_SIZE)
   })
-  MeshRenderer.setBox(ground)
-  MeshCollider.setBox(ground)
-  Material.setPbrMaterial(ground, {
+  MeshRenderer.setBox(surface)
+  MeshCollider.setBox(surface)
+  Material.setPbrMaterial(surface, {
     albedoColor: Color4.create(COLORS.GROUND.r, COLORS.GROUND.g, COLORS.GROUND.b, 1),
     roughness: 0.9,
     metallic: 0
   })
+  return surface
 }
 
 /**

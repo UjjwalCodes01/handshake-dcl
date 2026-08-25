@@ -119,6 +119,26 @@ export const ECHOES = {
   ]
 } as const
 
+export const DAYLIGHT = {
+  /**
+   * How often the shared world clock is polled, in seconds.
+   *
+   * Rarely: a Decentraland day is long, the visible mood changes slowly, and
+   * this is a host call competing for the same in-flight budget as everything
+   * else the runtime does.
+   */
+  POLL_INTERVAL_S: 12,
+
+  /**
+   * Distinct visual steps per day.
+   *
+   * Materials are rewritten only when the step changes. Writing a new colour
+   * every tick would be a continuous stream of component updates for a change
+   * no eye can follow between frames.
+   */
+  STEPS: 48
+} as const
+
 export const GUIDE = {
   /**
    * A wordless marker over the nearest thing a new player can act on.

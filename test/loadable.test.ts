@@ -22,6 +22,7 @@ import assert from 'node:assert/strict'
  */
 const PURE_MODULES = [
   '../src/hash.ts',
+  '../src/daylight.ts',
   '../src/placement.ts',
   '../src/sync-ids.ts',
   '../src/config.ts',

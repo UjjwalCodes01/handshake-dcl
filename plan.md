@@ -76,6 +76,7 @@ understood in **under 15 seconds**, in any language.
 | 3d. Retention — the roll of most-connected | ✅ Code complete, **untested on device** |
 | 3e. Handshake emote + personal standing | ✅ Code complete, **untested on device** |
 | 3f. The Guide — wordless onboarding | ✅ Code complete, **untested on device** |
+| 3g. Shared day/night cycle | ✅ Code complete, **untested on device** |
 | 4. Performance pass | ◐ Static half done; **device measurement is yours** |
 | 5. Freeze | ⬜ |
 | 6. Polish + docs | ◐ README, LICENSE, CI, reproducible install ✅ · thumbnail ⬜ |

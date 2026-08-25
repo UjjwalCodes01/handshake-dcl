@@ -7,6 +7,7 @@ import { sessionTick } from '../net/session'
 import { updateBeacon } from '../entities/world'
 import { echoesSystem } from './echoes'
 import { updateGuide } from './guide'
+import { daylightSystem } from './daylight'
 
 const INTERVAL = 1 / HANDSHAKE.SCAN_HZ
 let accumulated = 0
@@ -42,4 +43,6 @@ export function tickSystem(dt: number): void {
   echoesSystem(elapsed)
   // After pendingHands, which computes the target it points at.
   updateGuide()
+  // Shared world clock: everyone sees the same sky at the same moment.
+  daylightSystem(elapsed)
 }
