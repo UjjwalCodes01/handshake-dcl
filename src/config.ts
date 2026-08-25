@@ -252,6 +252,14 @@ export const SERVER = {
    */
   MAX_ANSWERED_ENTRIES: 400,
 
+  /**
+   * Display names kept in memory. Bounded by evicting the least recently seen,
+   * never by refusing new ones — see server/names.ts.
+   */
+  MAX_DISPLAY_NAMES: 500,
+  /** Attacker-supplied text synced to every client; truncated before storage. */
+  MAX_NAME_LENGTH: 24,
+
   /** How many visitors the most-connected table tracks before pruning. */
   MAX_CONNECTORS: 200,
   /** How many appear on the roll at the anchor. */

@@ -310,12 +310,16 @@ function serverTick(dt: number): void {
   sinceFailureReport += dt
   sinceExpirySweep += dt
 
-  // Age out hands left by visitors who are never coming back, so the pool stays
-  // available to people who are actually here. Deliberately infrequent — this is
-  // housekeeping, not gameplay, and it touches every slot.
+  // Housekeeping for a world that stays up for days at a time. Deliberately
+  // infrequent: none of it is gameplay, and it touches every slot.
   if (ready && sinceExpirySweep >= SERVER.EXPIRY_SWEEP_INTERVAL_S) {
     sinceExpirySweep = 0
+    // Age out hands left by visitors who are never coming back, so the pool
+    // stays available to people who are actually here.
     for (const slot of expireHands(Date.now())) publishHand(slot)
+    // Drop rate-limit history for players who left without onLeaveScene firing,
+    // which it does not on a crash or a dropped connection.
+    rateLimiter.prune(Date.now())
   }
 
   if (accumulated >= SERVER.FLUSH_INTERVAL_S) {
@@ -325,7 +329,7 @@ function serverTick(dt: number): void {
 
   // The retry layer gives up after a bounded number of attempts. If that is
   // never reported, the scene silently forgets history while appearing healthy —
-  // exactly the failure the storage wrapper exists to prevent. Repeat it so it
+  // exactly the failure the storage wrapper exists to prevent. Repeated so it
   // cannot be missed in a log tail.
   if (sinceFailureReport >= SERVER.FAILURE_REPORT_INTERVAL_S) {
     sinceFailureReport = 0

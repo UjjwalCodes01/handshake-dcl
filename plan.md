@@ -284,6 +284,29 @@ premise; one rewarding meeting people rewards exactly what the scene is for.
 
 ---
 
+## 5a2. Surviving a week of judging
+
+The scene must stay up and healthy from Sept 5–11, and the Multiplayer Server
+runs continuously while anyone is present, inside a **256 MB isolate**. Audited
+every collection in the codebase for growth that is bounded only by how long the
+world stays popular. Two were not bounded:
+
+| Collection | Was | Now |
+|---|---|---|
+| `RateLimiter.seen` | cleaned only by `onLeaveScene`, which does **not** fire on a crash or dropped connection — so it grew for every visitor the world ever had | pruned on the housekeeping sweep |
+| `displayNames` | capped at 500 by **refusing** new entries | bounded by **evicting** the least recently seen |
+
+The second was the more interesting failure. Refusing entries bounds memory, but
+after 500 unique visitors **nobody new is ever named again** — hands and links
+quietly start showing as anonymous. It only appears in a world successful enough
+to have had 500 visitors, and nothing about it looks like a bug.
+
+Everything else was already bounded: slot pools are fixed, `linkedPairs` is
+evicted with its link, `answered` and `connectors` are capped, offers and
+cooldowns are pruned, and the client's per-tick maps are keyed by slot.
+
+---
+
 ## 5b2. Deploy readiness
 
 `npm run preflight` runs a production build and checks everything checkable before you

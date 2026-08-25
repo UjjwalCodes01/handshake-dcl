@@ -2,6 +2,7 @@ import { HAND_SLOT_COUNT, LINK_SLOT_COUNT } from '../sync-ids'
 import { HANDS, SERVER } from '../config'
 import { loadAll, persist } from '../net/storage'
 import { parseConnectors, recordConnection, serialiseConnectors, topConnectors } from './ranking'
+import { NameTable } from './names'
 import type { Connector } from './ranking'
 
 export type { Connector } from './ranking'
@@ -67,24 +68,23 @@ export function creditConnection(a: string, aName: string, b: string, bName: str
   persist(KEY_CONNECTORS, serialiseConnectors(connectors, SERVER.MAX_CONNECTORS))
 }
 
-/** address -> display name, learned at join. Not persisted; cheap to relearn. */
-const displayNames = new Map<string, string>()
+/**
+ * address -> display name, learned at join. Not persisted; cheap to relearn.
+ * Bounded by EVICTION, not refusal — see ./names for why that distinction
+ * decides whether a successful world keeps naming people.
+ */
+const displayNames = new NameTable(SERVER.MAX_DISPLAY_NAMES, SERVER.MAX_NAME_LENGTH)
 
 export function rememberDisplayName(address: string, name: string): void {
-  if (!address) return
-  // Bound both the count and the length: this is attacker-supplied text inside
-  // a 256 MB isolate, and it is echoed to every other client via a synced
-  // component whose messages are capped at ~13 KB.
-  if (displayNames.size > 500 && !displayNames.has(address)) return
-  displayNames.set(address, name.slice(0, 24))
+  displayNames.remember(address, name)
 }
 
 export function getDisplayName(address: string): string {
-  return displayNames.get(address) ?? ''
+  return displayNames.get(address)
 }
 
 export function forgetDisplayName(address: string): void {
-  displayNames.delete(address)
+  displayNames.forget(address)
 }
 
 export function getHands(): readonly (HandRecord | null)[] {

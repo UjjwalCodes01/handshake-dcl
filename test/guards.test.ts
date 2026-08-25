@@ -149,3 +149,23 @@ test('a departing player leaves no claim behind', () => {
   c.forget(A)
   assert.equal(c.claim(B, A, T0 + 100), null, 'a departed player\'s claim still completed')
 })
+
+test('rate-limit history is pruned for players who never left cleanly', () => {
+  // forget() covers the clean case, but onLeaveScene does not fire on a crash or
+  // a dropped connection. Without pruning, this table grows for every visitor
+  // the world ever has — slow, but this scene is meant to stay up for a week of
+  // judging inside a 256 MB isolate, and slow is long enough.
+  const r = new RateLimiter(MAX, WINDOW)
+  for (let i = 0; i < 200; i++) r.check(`0x${i}`, T0)
+  assert.equal(r.trackedPlayers, 200)
+  r.prune(T0 + WINDOW)
+  assert.equal(r.trackedPlayers, 0, 'stale rate-limit history was retained')
+})
+
+test('pruning keeps players who are still active', () => {
+  const r = new RateLimiter(MAX, WINDOW)
+  r.check(A, T0)
+  r.check(B, T0 + WINDOW)
+  r.prune(T0 + WINDOW)
+  assert.equal(r.trackedPlayers, 1, 'pruned an active player')
+})

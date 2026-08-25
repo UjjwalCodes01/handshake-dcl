@@ -52,6 +52,20 @@ export class RateLimiter {
     this.seen.delete(address)
   }
 
+  /**
+   * Drops players with no activity inside the window.
+   *
+   * forget() covers the clean case, but onLeaveScene does not fire on a crash or
+   * a dropped connection — so without this the table grows for every visitor the
+   * scene ever has. That is slow, but this world is meant to stay up for a week
+   * of judging inside a 256 MB isolate, and "slow" is long enough.
+   */
+  prune(now: number): void {
+    for (const [address, times] of this.seen) {
+      if (times.every((t) => now - t >= this.windowMs)) this.seen.delete(address)
+    }
+  }
+
   get trackedPlayers(): number {
     return this.seen.size
   }
