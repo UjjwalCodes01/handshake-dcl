@@ -14,6 +14,7 @@ import {
   isSlotInFlight
 } from '../systems/pendingHands'
 import { shortAge } from './relativeTime'
+import { resolveTopPanel } from './topPanel.ts'
 import {
   answerPillar,
   getProgress,
@@ -268,8 +269,7 @@ const Hud = () => {
   const waking = isWaking()
   const reading = getLinkReading()
   const roll = getTopConnectors()
-  // Shown only while standing at the anchor, and only once somebody is on it.
-  const showRoll = isAtAnchor() && roll.length > 0 && !waking
+
   // Nobody has ever completed a handshake here and no hands are waiting. The
   // player is genuinely first — which deserves to feel like an event rather
   // than an empty room.
@@ -282,6 +282,18 @@ const Hud = () => {
   // renderer stays free of side effects.
   const answered = getAnsweredWhileAway()
   const showingAnswered = answered > 0
+
+  // One panel, one priority chain. Declared last so every input it reads is
+  // already resolved — the ordering lives in resolveTopPanel, not here.
+  const panel = resolveTopPanel({
+    waking,
+    puzzleActive,
+    showingAnswered,
+    atAnchorWithRoll: isAtAnchor() && roll.length > 0,
+    reading: reading !== null,
+    isFirstEver,
+    hasHandOutIdle: action === null && playerHasHandOut()
+  })
 
   return (
     <ScreenInsetArea>
@@ -311,7 +323,7 @@ const Hud = () => {
             recently, and a judge opening an empty world IS that cold start.
             Without this the scene just looks broken for fifteen seconds, which
             is most of the attention it will ever get. */}
-        {waking ? (
+        {panel === 'waking' ? (
           <UiEntity
             uiTransform={{
               positionType: 'absolute',
@@ -330,7 +342,7 @@ const Hud = () => {
         {/* Echo puzzle readout — TOP CENTRE.
             Watch-vs-answer is shown by icon alone, and progress by pips, so the
             whole loop is legible without a word of text in any language. */}
-        {puzzleActive && !waking ? (
+        {panel === 'puzzle' ? (
           <UiEntity
             uiTransform={{
               positionType: 'absolute',
@@ -363,13 +375,13 @@ const Hud = () => {
             Ranks CONNECTIONS, not points: a scoreboard rewarding domination
             would fight the premise, one rewarding meeting people rewards
             exactly what the scene is for. */}
-        {showRoll ? (
+        {panel === 'roll' ? (
           <UiEntity
             uiTransform={{
               positionType: 'absolute',
               position: { top: '13%', left: '18%' },
               width: '64%',
-              height: '32%',
+              height: '28%',
               justifyContent: 'center',
               alignItems: 'center'
             }}
@@ -382,7 +394,7 @@ const Hud = () => {
         {/* Reading a link — who made it, and how long ago. TOP CENTRE.
             This is the solo player's content: the lattice is a record of real
             people, browsable on foot with nobody else online. */}
-        {reading !== null && !waking && !showingAnswered && !puzzleActive && !showRoll ? (
+        {panel === 'reading' && reading !== null ? (
           <UiEntity
             uiTransform={{
               positionType: 'absolute',
@@ -404,7 +416,7 @@ const Hud = () => {
         ) : null}
 
         {/* First ever visitor — nothing has happened here yet. */}
-        {isFirstEver && !waking && reading === null && !puzzleActive && !showRoll ? (
+        {panel === 'first' ? (
           <UiEntity
             uiTransform={{
               positionType: 'absolute',
@@ -423,7 +435,7 @@ const Hud = () => {
         {/* "You were answered while away" — TOP CENTRE, below the counter.
             The single strongest reason to come back, so it is the first thing
             shown on return, wordlessly. */}
-        {showingAnswered && !waking && !puzzleActive && !showRoll ? (
+        {panel === 'answered' ? (
           <UiEntity
             uiTransform={{
               positionType: 'absolute',
@@ -441,7 +453,7 @@ const Hud = () => {
 
         {/* Waiting indicator — shown only while we have a hand out and nothing
             else to do, so a solo player still sees their own contribution. */}
-        {action === null && !waking && !showingAnswered && reading === null && !puzzleActive && !showRoll && playerHasHandOut() ? (
+        {panel === 'waiting' ? (
           <UiEntity
             uiTransform={{
               positionType: 'absolute',

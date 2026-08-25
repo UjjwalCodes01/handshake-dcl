@@ -35,7 +35,8 @@ const PURE_MODULES = [
   '../src/server/ranking.ts',
   '../src/systems/echoMachine.ts',
   '../src/systems/offers.ts',
-  '../src/ui/relativeTime.ts'
+  '../src/ui/relativeTime.ts',
+  '../src/ui/topPanel.ts'
 ]
 
 for (const path of PURE_MODULES) {
