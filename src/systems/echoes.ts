@@ -1,203 +1,120 @@
 import { engine, Transform } from '@dcl/sdk/ecs'
-import { Vector3 } from '@dcl/sdk/math'
 import { ECHOES } from '../config'
 import { createPillars, getPillarPosition, setAllPillarsLit, setPillarLit } from '../entities/pillars'
 import { hashString } from '../hash'
 import { getSelfAddress } from '../net/identity'
+import { EchoMachine } from './echoMachine'
 
 /**
- * The solo puzzle. Four pillars flash a sequence; the player walks to each in
- * turn and answers it. Three rounds of increasing length earn a permanent mark
- * on the next hand they leave.
+ * SDK-facing shell for the Echoes puzzle.
  *
- * Entirely client-side and single-player. There is no shared state, so nothing
- * here is synced and nothing costs network budget.
+ * All the state and every transition live in ./echoMachine, which is pure and
+ * tested. This file does only the three things that need the engine: work out
+ * whether the player is standing at a pillar, drive the machine, and apply the
+ * lighting the machine asks for.
  *
- * The reward is deliberately cosmetic and deliberately NOT server-validated. A
- * modified client could claim the mark without solving anything — but it buys
- * no advantage, affects no one else's experience, and cannot forge a handshake.
- * Validating it server-side would mean replaying the whole puzzle on the server
- * to guard a colour change, which is not a trade worth making. Anything that
- * actually matters (links, hands, counts) remains server-authoritative.
+ * The reward is deliberately cosmetic and NOT server-validated. A modified
+ * client could claim the mark without solving anything, but it buys no
+ * advantage, changes nobody else's experience, and cannot forge a handshake.
+ * Validating it would mean replaying the whole puzzle server-side to guard a
+ * colour change. Everything that actually matters stays server-authoritative.
  */
 
 /**
- * Phases of the puzzle.
+ * Sequences come from hashing, not Math.random().
  *
- * A plain frozen object rather than a `const enum`. Enums GENERATE code, and
- * this project is constrained to erasable-only TypeScript so every module stays
- * loadable by Node's strip-only runtime — which is what makes the logic
- * testable outside the QuickJS sandbox. `erasableSyntaxOnly` in tsconfig
- * enforces it.
+ * The scene runs in a QuickJS sandbox, and sandboxes sometimes stub or freeze
+ * Math.random for determinism. If that happened the puzzle would silently serve
+ * one sequence forever — a failure no typecheck would catch and one easy to miss
+ * in a quick playthrough. Hashing depends only on arithmetic, and mixing in the
+ * player's own address keeps sequences different between players.
  */
-const Phase = {
-  /** Nobody is near; nothing is running. */
-  Idle: 0,
-  /** Pause before playback so the player can look up. */
-  LeadIn: 1,
-  /** Flashing the sequence. */
-  Playback: 2,
-  /** Waiting for the player to answer. */
-  Input: 3,
-  /** Brief hold after a right or wrong answer. */
-  Resolve: 4
-} as const
+function makeSequence(round: number, attempt: number, length: number): number[] {
+  const salt = getSelfAddress()
+  const out: number[] = []
+  for (let i = 0; i < length; i++) {
+    out.push(hashString(`${salt}|${attempt}|${round}|${i}`) % ECHOES.PILLAR_COUNT)
+  }
+  return out
+}
 
-type Phase = (typeof Phase)[keyof typeof Phase]
-
-let phase: Phase = Phase.Idle
-let round = 0
-let sequence: number[] = []
-/** How far through the sequence the player has answered correctly. */
-let progress = 0
-/** Index into `sequence` currently being flashed. */
-let playbackIndex = 0
-let flashOn = false
-let timer = 0
-let lastResultOk = false
-let earnedMark = false
+const machine = new EchoMachine({
+  pillarCount: ECHOES.PILLAR_COUNT,
+  roundLengths: ECHOES.ROUND_LENGTHS,
+  leadInS: ECHOES.LEAD_IN_S,
+  flashOnS: ECHOES.FLASH_ON_S,
+  flashGapS: ECHOES.FLASH_GAP_S,
+  resolveS: ECHOES.RESOLVE_S,
+  graceS: ECHOES.GRACE_S,
+  makeSequence
+})
 
 let reachablePillar = -1
-/** Seconds since the scene started, so the puzzle cannot ambush an arrival. */
-let sinceStart = 0
+/** Last lighting applied, so pillars are only rewritten when it changes. */
+let appliedLit = ''
 
 export function getReachablePillar(): number {
   return reachablePillar
 }
-
-/** True while the player should be answering, so the HUD can offer the action. */
 export function isAwaitingInput(): boolean {
-  return phase === Phase.Input
+  return machine.isAwaitingInput
 }
-
-/** True while the sequence is playing — the moment to watch, not act. */
 export function isPlayingBack(): boolean {
-  return phase === Phase.LeadIn || phase === Phase.Playback
+  return machine.isPlayingBack
 }
-
 export function isResolving(): boolean {
-  return phase === Phase.Resolve
+  return machine.isResolving
 }
-
 export function lastAnswerWasCorrect(): boolean {
-  return lastResultOk
+  return machine.lastAnswerWasCorrect
 }
-
-/** Round the player is on, 1-based, for a wordless progress readout. */
 export function getRound(): number {
-  return round + 1
+  return machine.round
 }
-
 export function getTotalRounds(): number {
-  return ECHOES.ROUND_LENGTHS.length
+  return machine.totalRounds
 }
-
-/** How many steps of the current sequence are already answered. */
 export function getProgress(): number {
-  return progress
+  return machine.progress
 }
-
 export function getSequenceLength(): number {
-  return sequence.length
+  return machine.sequenceLength
 }
-
-/** True once the puzzle has been solved this session. */
 export function hasEarnedMark(): boolean {
-  return earnedMark
+  return machine.hasEarnedMark
+}
+export function consumeMark(): boolean {
+  return machine.consumeMark()
 }
 
-/** Consumed by the server request when a marked hand is left. */
-export function consumeMark(): boolean {
-  if (!earnedMark) return false
-  earnedMark = false
-  return true
+/** Called by the UI when the player answers the pillar they are standing at. */
+export function answerPillar(): void {
+  machine.answer(reachablePillar)
 }
 
 export function setupEchoes(): void {
   createPillars()
 }
 
-/** Increments per attempt so a replay never repeats the previous sequence. */
-let attempt = 0
+/** Applies whatever lighting the machine currently asks for, only on change. */
+function applyLighting(): void {
+  const lit = machine.litPillars()
+  const key = lit.join(',')
+  if (key === appliedLit) return
+  appliedLit = key
 
-/**
- * Builds a sequence by hashing, not by Math.random().
- *
- * The scene runtime is a QuickJS sandbox, and sandboxes sometimes stub or
- * freeze Math.random for determinism. If that happened here the puzzle would
- * silently serve the same sequence forever — a failure that would never show up
- * in a typecheck and might not be obvious on a quick playthrough either.
- * Hashing depends only on arithmetic, which cannot be taken away, and mixing in
- * the player's own address keeps sequences different between players.
- */
-function buildSequence(length: number): number[] {
-  const salt = getSelfAddress()
-  const out: number[] = []
-  for (let i = 0; i < length; i++) {
-    const h = hashString(`${salt}|${attempt}|${round}|${i}`)
-    out.push(h % ECHOES.PILLAR_COUNT)
-  }
-  return out
-}
-
-function startRound(index: number): void {
-  attempt += 1
-  round = Math.min(index, ECHOES.ROUND_LENGTHS.length - 1)
-  sequence = buildSequence(ECHOES.ROUND_LENGTHS[round])
-  progress = 0
-  playbackIndex = 0
-  flashOn = false
-  timer = 0
-  phase = Phase.LeadIn
-  setAllPillarsLit(false)
-}
-
-function reset(): void {
-  phase = Phase.Idle
-  round = 0
-  sequence = []
-  progress = 0
-  playbackIndex = 0
-  flashOn = false
-  timer = 0
-  setAllPillarsLit(false)
-}
-
-/**
- * Called by the UI when the player answers the pillar they are standing at.
- */
-export function answerPillar(): void {
-  if (phase !== Phase.Input) return
-  if (reachablePillar < 0) return
-
-  const expected = sequence[progress]
-  if (reachablePillar === expected) {
-    progress += 1
-    if (progress >= sequence.length) {
-      // Round cleared.
-      lastResultOk = true
-      phase = Phase.Resolve
-      timer = 0
-      setAllPillarsLit(true)
-      if (round + 1 >= ECHOES.ROUND_LENGTHS.length) earnedMark = true
-    }
+  if (lit.length === ECHOES.PILLAR_COUNT) {
+    setAllPillarsLit(true)
     return
   }
-
-  // Wrong pillar — back to the first round.
-  lastResultOk = false
-  phase = Phase.Resolve
-  timer = 0
-  setAllPillarsLit(false)
+  for (let i = 0; i < ECHOES.PILLAR_COUNT; i++) {
+    setPillarLit(i, lit.includes(i))
+  }
 }
 
-/**
- * Drives the puzzle. Called from the throttled tick, never per frame.
- */
+/** Drives the puzzle. Called from the throttled tick, never per frame. */
 export function echoesSystem(dt: number): void {
-  sinceStart += dt
-
-  // Work out which pillar the player can answer.
+  // Which pillar can the player answer right now?
   const selfTransform = Transform.getOrNull(engine.PlayerEntity)
   reachablePillar = -1
   let nearestDistSq = ECHOES.REACH_M * ECHOES.REACH_M
@@ -219,77 +136,13 @@ export function echoesSystem(dt: number): void {
     }
   }
 
-  const nearRing = reachablePillar >= 0
-
-  switch (phase) {
-    case Phase.Idle:
-      // Walking up to a pillar starts it. No prompt, no button to find —
-      // approaching IS the interaction. The grace period keeps a player who
-      // happens to arrive next to a pillar from being hijacked before they have
-      // even seen the lattice.
-      if (nearRing && sinceStart >= ECHOES.GRACE_S) startRound(0)
-      return
-
-    case Phase.LeadIn:
-      if (!nearRing) return reset()
-      timer += dt
-      if (timer >= ECHOES.LEAD_IN_S) {
-        timer = 0
-        playbackIndex = 0
-        flashOn = true
-        setPillarLit(sequence[0], true)
-        phase = Phase.Playback
-      }
-      return
-
-    case Phase.Playback: {
-      if (!nearRing) return reset()
-      timer += dt
-      const limit = flashOn ? ECHOES.FLASH_ON_S : ECHOES.FLASH_GAP_S
-      if (timer < limit) return
-      timer = 0
-
-      if (flashOn) {
-        setPillarLit(sequence[playbackIndex], false)
-        flashOn = false
-        playbackIndex += 1
-        if (playbackIndex >= sequence.length) {
-          phase = Phase.Input
-          progress = 0
-        }
-        return
-      }
-
-      setPillarLit(sequence[playbackIndex], true)
-      flashOn = true
-      return
-    }
-
-    case Phase.Input:
-      // Leaving the ring abandons the attempt rather than leaving the puzzle
-      // half-finished for whenever the player wanders back.
-      if (!nearRing) reset()
-      return
-
-    case Phase.Resolve:
-      timer += dt
-      if (timer < ECHOES.RESOLVE_S) return
-      timer = 0
-      setAllPillarsLit(false)
-      if (!lastResultOk) return reset()
-      if (round + 1 >= ECHOES.ROUND_LENGTHS.length) {
-        // Solved outright. Idle so it can be played again.
-        reset()
-        return
-      }
-      startRound(round + 1)
-      return
-  }
+  machine.update(dt, reachablePillar >= 0)
+  applyLighting()
 }
 
 /** Test seam / teardown. */
 export function resetEchoes(): void {
-  reset()
-  earnedMark = false
-  sinceStart = 0
+  machine.resetAll()
+  reachablePillar = -1
+  appliedLit = ''
 }

@@ -33,6 +33,7 @@ const PURE_MODULES = [
   '../src/server/guards.ts',
   '../src/server/names.ts',
   '../src/server/ranking.ts',
+  '../src/systems/echoMachine.ts',
   '../src/systems/offers.ts',
   '../src/ui/relativeTime.ts'
 ]
