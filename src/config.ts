@@ -119,6 +119,27 @@ export const ECHOES = {
   ]
 } as const
 
+export const GUIDE = {
+  /**
+   * A wordless marker over the nearest thing a new player can act on.
+   *
+   * The scene has no text and no tutorial, which is the right call — but a
+   * first-timer still has to work out that walking somewhere is the move. This
+   * is the whole of the onboarding: a floating mark, universally understood from
+   * every game that has ever used one, and no language to translate.
+   *
+   * It disappears the moment the player completes their first handshake. After
+   * that they know, and a permanent marker would just be clutter.
+   */
+  SIZE: 0.3,
+  /** How far above the target it floats. */
+  HEIGHT_OFFSET_M: 1.4,
+  /** Bob amplitude and period, to catch the eye without being frantic. */
+  BOB_M: 0.18,
+  BOB_PERIOD_S: 2.2,
+  TINT: { r: 1.0, g: 0.95, b: 0.7 }
+} as const
+
 export const EMOTE = {
   /**
    * Played when a handshake completes.

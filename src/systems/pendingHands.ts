@@ -38,6 +38,13 @@ const positions = new Map<number, Vector3.MutableVector3>()
 
 let reachableSlot = -1
 let pendingCount = 0
+/**
+ * Nearest answerable hand ANYWHERE, not just within reach.
+ *
+ * The reach test answers "can I tap this now"; the guide needs "where should I
+ * walk", which is a different question and a much larger radius.
+ */
+let nearestAnswerable: Vector3.MutableVector3 | undefined
 /** Display name of the hand within reach, surfaced by the HUD. */
 let reachableOwnerName = ''
 /**
@@ -67,6 +74,11 @@ export function getReachableSlot(): number {
 /** How many hands are currently waiting anywhere in the world. */
 export function getPendingCount(): number {
   return pendingCount
+}
+
+/** Position of the nearest hand this player could answer, at any distance. */
+export function getNearestAnswerablePosition(): Vector3.ReadonlyVector3 | undefined {
+  return nearestAnswerable
 }
 export function getReachableOwnerName(): string {
   return reachableOwnerName
@@ -169,6 +181,8 @@ export function renderPendingHands(): void {
   let nearestName = ''
   let nearestDistSq = Number.MAX_VALUE
   let activeCount = 0
+  let guideDistSq = Number.MAX_VALUE
+  let guideTarget: Vector3.MutableVector3 | undefined
 
   const reachSq = HANDS.REACH_M * HANDS.REACH_M
   const releaseSq = HANDS.REACH_RELEASE_M * HANDS.REACH_RELEASE_M
@@ -263,6 +277,7 @@ export function renderPendingHands(): void {
   reachableSlot = nearest
   reachableOwnerName = nearestName
   pendingCount = activeCount
+  nearestAnswerable = guideTarget
 }
 
 /** Test seam / teardown. */
@@ -273,5 +288,6 @@ export function resetPendingHands(): void {
   reachableSlot = -1
   reachableOwnerName = ''
   pendingCount = 0
+  nearestAnswerable = undefined
   lastRequestedSlot = -1
 }

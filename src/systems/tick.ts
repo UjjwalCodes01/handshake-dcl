@@ -6,6 +6,7 @@ import { renderPendingHands } from './pendingHands'
 import { sessionTick } from '../net/session'
 import { updateBeacon } from '../entities/world'
 import { echoesSystem } from './echoes'
+import { updateGuide } from './guide'
 
 const INTERVAL = 1 / HANDSHAKE.SCAN_HZ
 let accumulated = 0
@@ -39,4 +40,6 @@ export function tickSystem(dt: number): void {
   renderLattice()
   updateBeacon(getTotalHandshakes())
   echoesSystem(elapsed)
+  // After pendingHands, which computes the target it points at.
+  updateGuide()
 }

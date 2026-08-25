@@ -39,6 +39,7 @@ No instructions, no tutorial, no text to read. One button, one tap.
 | 🤝 Another player standing near you | Both tap within a few seconds — a live link, brighter than the rest |
 | ✋ Nothing nearby | Tap to leave your own hand for the next visitor |
 | ◉ Four pillars on the outer ring | Walk over — they flash a sequence; repeat it to earn a **mark** |
+| ◆ A floating mark, on your first visit only | Walk to it. It points at the nearest hand you can answer, and vanishes once you have shaken one |
 | The lattice in the centre | Stand near any link to see who made it, and how long ago |
 
 The central pillar brightens as the lattice fills, so you can tell at a glance whether this

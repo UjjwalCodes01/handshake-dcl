@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { ECHOES, HANDS, HANDSHAKE, LATTICE, SCENE } from '../src/config.ts'
 import { anchorHeight } from '../src/placement.ts'
+import { GUIDE } from '../src/config.ts'
 
 const scene = JSON.parse(readFileSync(new URL('../scene.json', import.meta.url), 'utf8'))
 import { HAND_SLOT_COUNT, LINK_SLOT_COUNT, assertSyncIdsValid, handSlotId, linkSlotId } from '../src/sync-ids.ts'
@@ -126,4 +127,19 @@ test('a nonsensical total falls back to the base height', () => {
       LATTICE.HEIGHT_M
     )
   }
+})
+
+test('the guide marker floats clear of the hand it points at', () => {
+  // Too low and it overlaps the hand it is meant to identify; too high and it
+  // reads as pointing at nothing. Must clear a hand at HANDS.HEIGHT_M plus its
+  // own half-size.
+  const markerBase = HANDS.HEIGHT_M + GUIDE.HEIGHT_OFFSET_M - GUIDE.SIZE / 2
+  const handTop = HANDS.HEIGHT_M + (HANDS.SIZE * HANDS.REACH_SCALE) / 2
+  assert.ok(markerBase > handTop, `marker base ${markerBase} overlaps a reachable hand topping out at ${handTop}`)
+})
+
+test('the guide marker stays under the scene height limit', () => {
+  const LIMIT = Math.log2(scene.scene.parcels.length + 1) * 20
+  const top = HANDS.HEIGHT_M + GUIDE.HEIGHT_OFFSET_M + GUIDE.SIZE
+  assert.ok(top < LIMIT, `guide marker reaches ${top} m against a ${LIMIT} m limit`)
 })
