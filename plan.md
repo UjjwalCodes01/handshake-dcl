@@ -80,7 +80,8 @@ understood in **under 15 seconds**, in any language.
 | 4. Performance pass | ◐ Static half done; **device measurement is yours** |
 | 5. Freeze | ⬜ |
 | 6. Polish + docs | ◐ README, LICENSE, CI, reproducible install ✅ · thumbnail ⬜ |
-| 7–8. Submit + buffer | ⬜ |
+| 7. Submit | ◐ [SUBMISSION.md](./SUBMISSION.md) prepared — copy, criteria mapping, walkthrough, checklist |
+| 8. Buffer | ⬜ |
 
 **Aug 20 — first real device connection.** A wallet authenticated and connected from a
 phone over LAN preview (`npm run start:mobile`). The mobile testing loop no longer

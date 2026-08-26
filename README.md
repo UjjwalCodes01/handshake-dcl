@@ -215,6 +215,14 @@ measurement and a deploy — neither of which can be faked by reading the source
 
 ---
 
+## For judges and reviewers
+
+[SUBMISSION.md](./SUBMISSION.md) has the 90-second walkthrough, the eligibility
+checklist, and an honest account of what is verified and what is not.
+[DEPLOYMENT.md](./DEPLOYMENT.md) covers publishing.
+
+---
+
 ## License
 
 MIT — see [LICENSE](./LICENSE).
