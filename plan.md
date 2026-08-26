@@ -69,7 +69,7 @@ understood in **under 15 seconds**, in any language.
 | 0. Scaffold + toolchain | ✅ Done — SDK 7.26.0, `tsc --noEmit` clean, `npm run build` clean |
 | 0b. Deploy pipeline proven on a real phone | ⬜ **Blocked on you** — de-risked as far as possible: `npm run preflight` passes |
 | 1. Live handshake vertical slice | ✅ Code complete, **untested on device** |
-| 2. Async persistence + pending hands | ✅ Code complete, **boots clean**, untested with a client |
+| 2. Async persistence + pending hands | ✅ **Write path verified against real data** — see below |
 | 3. Mobile UX pass | ✅ Code complete; **verified running on a real phone** |
 | 3b. Solo layer — explorable lattice | ✅ Code complete, **untested on device** |
 | 3c. Solo layer — Echoes puzzle | ✅ Code complete, **untested on device** |
@@ -82,6 +82,25 @@ understood in **under 15 seconds**, in any language.
 | 6. Polish + docs | ◐ README, LICENSE, CI, reproducible install ✅ · thumbnail ⬜ |
 | 7. Submit | ◐ [SUBMISSION.md](./SUBMISSION.md) prepared — copy, criteria mapping, walkthrough, checklist |
 | 8. Buffer | ⬜ |
+
+**Aug 26 — persistence write path verified, locally.** I had been saying the async
+thesis could not be checked without deploying. That was wrong: the local Multiplayer
+Server exposes its storage at `/values`, and it still holds a hand written from a real
+phone during the Aug 20 mobile test — owner, seed, timestamp, `ownerIsGuest: true`.
+
+That single record proves three things at once:
+
+- the write path works end to end: tap → server → ledger → `Storage.set`
+- it **survived** every server restart since, which is the async premise
+- real devices connect as **guests**, so the guest handling is load-bearing rather
+  than defensive
+
+It also predates the `marked` field, making it a genuine legacy record. Running it
+through the real loader confirms it is accepted and defaulted rather than discarded —
+the schema-migration path tested against production data instead of a fixture. Its
+shape is now pinned as a regression test, with the address replaced.
+
+Still unverified: the READ path reaching a client, cold start, two wallets, and FPS.
 
 **Aug 20 — first real device connection.** A wallet authenticated and connected from a
 phone over LAN preview (`npm run start:mobile`). The mobile testing loop no longer

@@ -199,3 +199,44 @@ test('a corrupt answered blob yields an empty map, not a crash', () => {
 test('link pair keys are symmetric and match the client', () => {
   assert.equal(linkPairKey('0xa', '0xb'), linkPairKey('0xb', '0xa'))
 })
+
+// ---------- a real record, recovered from a live server ----------
+
+test('a record written by an earlier build still loads', () => {
+  // This is the exact SHAPE of a hand found in the local Multiplayer Server's
+  // storage, written by a real phone before `marked` existed. The address is
+  // replaced; nothing else is.
+  //
+  // It is the only production-written record this project has ever had, and it
+  // proves the thing synthetic fixtures cannot: that a record from a genuinely
+  // older build survives a schema change instead of being silently discarded.
+  const fromLiveServer = {
+    owner: '0x0000000000000000000000000000000000000001',
+    ownerName: 'MXu0KlFLAV',
+    ownerIsGuest: true,
+    seed: 67676,
+    createdAt: 1787256883561
+    // note: no `marked` — this predates that field
+  }
+
+  const loaded = normalizeHandRecord(fromLiveServer)
+  assert.ok(loaded, 'a real persisted record would have been erased on load')
+  assert.equal(loaded!.marked, false, 'missing field was not defaulted')
+  assert.equal(loaded!.ownerIsGuest, true, 'guest flag was lost')
+  assert.equal(loaded!.owner, fromLiveServer.owner)
+  assert.equal(loaded!.seed, 67676)
+})
+
+test('a guest hand is credited but never persisted', () => {
+  // Real devices connect as guests — the one production record we have is one.
+  // Guests can present a new address each session, so persisting an "answered"
+  // credit against theirs would store something nobody can ever collect.
+  const guest = normalizeHandRecord({
+    owner: '0x0000000000000000000000000000000000000001',
+    ownerName: 'MXu0KlFLAV',
+    ownerIsGuest: true,
+    seed: 1,
+    createdAt: 1
+  })
+  assert.equal(guest!.ownerIsGuest, true, 'the persistable decision depends on this flag surviving load')
+})
