@@ -42,6 +42,11 @@ No instructions, no tutorial, no text to read. One button, one tap.
 | ◆ A floating mark, on your first visit only | Walk to it. It points at the nearest hand you can answer, and vanishes once you have shaken one |
 | The lattice in the centre | Stand near any link to see who made it, and how long ago |
 
+**Everyone has a colour.** It is derived from your address, so it is the same on every
+screen and stored nowhere. Each link in the lattice is the two participants' colours
+mixed — which means a structure built by fifty strangers looks like fifty strangers
+built it, rather than like one pair did it fifty times.
+
 The central pillar brightens *and grows taller* as the lattice fills, so you can tell at a
 glance whether this place has a history.
 
