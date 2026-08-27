@@ -47,6 +47,21 @@ screen and stored nowhere. Each link in the lattice is the two participants' col
 mixed — which means a structure built by fifty strangers looks like fifty strangers
 built it, rather than like one pair did it fifty times.
 
+The whole visual language, with no text anywhere in it:
+
+| | |
+|---|---|
+| hue | who it belongs to |
+| shifted toward white | a mark earned by solving the echoes |
+| dim | your own waiting hand |
+| bright | someone else's hand |
+| brightest | the hand within reach |
+| lifted 1.45× | a link **you** are part of |
+| brighter still | a live handshake, rather than one made across time |
+
+Hue always says *who*; intensity always says *what*. The two never compete, so a
+stranger's hand is visibly theirs while still telling you whether you can answer it.
+
 The central pillar brightens *and grows taller* as the lattice fills, so you can tell at a
 glance whether this place has a history.
 

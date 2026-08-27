@@ -1,12 +1,13 @@
 import { engine, Transform, MeshRenderer, Material, Entity, VisibilityComponent, Tween } from '@dcl/sdk/ecs'
 import { Color4, Quaternion, Vector3 } from '@dcl/sdk/math'
 import { PendingHand } from '../components'
-import { COLORS, CONNECT, HANDS, SCENE } from '../config'
+import { CONNECT, HANDS, SCENE } from '../config'
 import { getHandSlots } from '../entities/slots'
 import { getSelfAddress } from '../net/identity'
 import { room } from '../net/protocol'
 import { PendingRequests } from '../net/pending'
 import { consumeMark } from './echoes'
+import { lighten, personColour } from '../personColour.ts'
 import { slotPlacement } from '../placement'
 import { HAND_SLOT_COUNT } from '../sync-ids'
 
@@ -248,11 +249,16 @@ export function renderPendingHands(): void {
     }
 
     if (!previous || previous.mine !== mine || previous.reachable !== reachable || previous.marked !== hand.marked) {
-      // Your own waiting hand is dim, so the ones you can actually answer are
-      // the ones that draw the eye. Reachable is brightest of all.
-      // A marked hand was left by someone who solved the echoes. Same shape, so
-      // it is never mistaken for a different kind of object — only brighter.
-      const tint = mine ? COLORS.LINK : hand.marked ? COLORS.MARKED : COLORS.LINK_FRESH
+      // HUE says who left it, exactly as it does for links — so you can pick
+      // your own hand out of the ring, and a stranger's hand is visibly theirs.
+      // STATE is carried by intensity instead: your own waiting hand is dim so
+      // the ones you can actually answer draw the eye, and the one within
+      // reach is brightest of all.
+      //
+      // A mark earned by solving the echoes shifts the colour toward white
+      // rather than replacing it: special, while still saying who.
+      const own = personColour(hand.owner)
+      const tint = hand.marked ? lighten(own, 0.4) : own
       Material.setPbrMaterial(spinner, {
         albedoColor: Color4.create(tint.r, tint.g, tint.b, 1),
         emissiveColor: Color4.create(tint.r, tint.g, tint.b, 1),

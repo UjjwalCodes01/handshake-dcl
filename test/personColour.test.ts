@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { blendColours, linkColour, personColour } from '../src/personColour.ts'
+import { blendColours, lighten, linkColour, personColour } from '../src/personColour.ts'
 import type { Rgb } from '../src/personColour.ts'
 
 const brightness = (c: Rgb) => (c.r + c.g + c.b) / 3
@@ -90,4 +90,37 @@ test('a blended link is still bright enough to read', () => {
     const c = linkColour(`0x${i}`, `0x${i + 500}`)
     assert.ok(brightness(c) > 0.35, `blend too dark: ${JSON.stringify(c)}`)
   }
+})
+
+// ---------- the earned mark ----------
+
+test('a marked hand still says who left it', () => {
+  // The mark must read as "special", not as "somebody else". Replacing the hue
+  // would erase the identity, which is the part worth protecting.
+  const owner = personColour('0xabc')
+  const marked = lighten(owner, 0.4)
+  assert.notDeepEqual(marked, owner, 'the mark is invisible')
+
+  // Hue is preserved if the channel ORDER is unchanged — the same colour, lifted.
+  const order = (c: Rgb) => [c.r >= c.g, c.g >= c.b, c.r >= c.b].join(',')
+  assert.equal(order(marked), order(owner), 'lightening shifted the hue')
+})
+
+test('a marked hand is brighter than an unmarked one', () => {
+  const owner = personColour('0xabc')
+  assert.ok(brightness(lighten(owner, 0.4)) > brightness(owner))
+})
+
+test('lightening never leaves the valid range', () => {
+  for (const amount of [-1, 0, 0.4, 1, 5]) {
+    const c = lighten(personColour('0xabc'), amount)
+    for (const channel of [c.r, c.g, c.b]) {
+      assert.ok(channel >= 0 && channel <= 1, `channel ${channel} out of range at amount ${amount}`)
+    }
+  }
+})
+
+test('lightening by zero changes nothing', () => {
+  const owner = personColour('0xabc')
+  assert.deepEqual(lighten(owner, 0), owner)
 })

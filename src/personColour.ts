@@ -85,6 +85,22 @@ export function blendColours(a: Rgb, b: Rgb): Rgb {
   return { r: (a.r + b.r) / 2, g: (a.g + b.g) / 2, b: (a.b + b.b) / 2 }
 }
 
+/**
+ * Shifts a colour toward white.
+ *
+ * Used for the mark earned by solving the echoes. Brightening rather than
+ * recolouring means the mark reads as "this one is special" while the hue still
+ * says WHO left it — the identity is the part worth protecting.
+ */
+export function lighten(colour: Rgb, amount: number): Rgb {
+  const t = Math.min(1, Math.max(0, amount))
+  return {
+    r: colour.r + (1 - colour.r) * t,
+    g: colour.g + (1 - colour.g) * t,
+    b: colour.b + (1 - colour.b) * t
+  }
+}
+
 /** Convenience: the colour of a handshake between two addresses. */
 export function linkColour(a: string, b: string): Rgb {
   return blendColours(personColour(a), personColour(b))

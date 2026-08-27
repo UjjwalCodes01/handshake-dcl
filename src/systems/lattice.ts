@@ -3,6 +3,7 @@ import { Color4, Quaternion, Vector3 } from '@dcl/sdk/math'
 import { HandshakeLink, WorldStats } from '../components'
 import { LATTICE, SCENE } from '../config'
 import { getLinkSlots, getStatsEntity } from '../entities/slots'
+import { getSelfAddress } from '../net/identity'
 import { pairKey } from '../net/identity'
 import { linkColour } from '../personColour.ts'
 import { slotPlacement } from '../placement'
@@ -19,7 +20,7 @@ import { LINK_SLOT_COUNT } from '../sync-ids'
  * only write when a value actually changed" — as a primary cause of FPS
  * collapse on a phone. Writes are now diffed against this record.
  */
-type Applied = { seed: number; live: boolean; visible: boolean; pair: string }
+type Applied = { seed: number; live: boolean; visible: boolean; pair: string; mine: boolean }
 const applied = new Map<Entity, Applied>()
 let linkCount = 0
 let totalHandshakes = 0
@@ -126,6 +127,7 @@ export function renderLattice(): void {
 
   let active = 0
   linkedPairs.clear()
+  const self = getSelfAddress()
 
   const selfTransform = Transform.getOrNull(engine.PlayerEntity)
   // Raised to mid-torso: the player Transform is at their feet, and the lattice
@@ -188,12 +190,17 @@ export function renderLattice(): void {
     }
 
     const pair = `${link.a}|${link.b}`
+    // A link you are part of. In a lattice of sixty, finding the ones that are
+    // yours is the difference between looking at a structure and recognising
+    // yourself in it.
+    const mine = self !== '' && (link.a === self || link.b === self)
     const unchanged =
       previous &&
       previous.visible &&
       previous.seed === link.seed &&
       previous.live === link.live &&
-      previous.pair === pair
+      previous.pair === pair &&
+      previous.mine === mine
     if (unchanged) continue
 
     const { position, rotation } = transformFor(i, link.seed)
@@ -218,15 +225,23 @@ export function renderLattice(): void {
       }
     }
 
-    if (!previous || previous.live !== link.live || previous.seed !== link.seed || previous.pair !== pair) {
+    if (
+      !previous ||
+      previous.live !== link.live ||
+      previous.seed !== link.seed ||
+      previous.pair !== pair ||
+      previous.mine !== mine
+    ) {
       // Opaque and emissive. Blended transparency bypasses the renderer's
       // batching optimisations and is called out in AGENTS.md §7.
       Material.setPbrMaterial(entity, {
         albedoColor: Color4.create(tint.r, tint.g, tint.b, 1),
         emissiveColor: Color4.create(tint.r, tint.g, tint.b, 1),
-        // A live handshake — both people present at once — is rarer, so it burns
-        // brighter rather than taking a different hue. The hue belongs to them.
-        emissiveIntensity: link.live ? 2.6 : 1.5,
+        // A live handshake — both present at once — is rarer, so it burns
+        // brighter rather than taking a different hue: the hue belongs to them.
+        // Your own links lift again, so the lattice is legible as a structure
+        // AND as a record of the people you personally met.
+        emissiveIntensity: (link.live ? 2.6 : 1.5) * (mine ? 1.45 : 1),
         roughness: 0.35
       })
     }
@@ -235,7 +250,7 @@ export function renderLattice(): void {
       VisibilityComponent.createOrReplace(entity, { visible: true })
     }
 
-    applied.set(entity, { seed: link.seed, live: link.live, visible: true, pair })
+    applied.set(entity, { seed: link.seed, live: link.live, visible: true, pair, mine })
   }
 
   linkCount = active
