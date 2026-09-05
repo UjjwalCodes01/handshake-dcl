@@ -26,3 +26,7 @@ test
 tools
 dclcontext
 LICENSE
+# Raw screenshots. Only the processed thumbnail ships;
+# tools/make-thumbnail.py writes images/scene-thumbnail.png.
+images/image.png
+images/raw-*
