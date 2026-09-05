@@ -7,7 +7,13 @@
       "Bash(echo \" verify EXIT=$?\")",
       "Read(//tmp/**)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(ps -eo pid,etime,args)",
+      "Bash(timeout 40 npx sdk-commands deploy --help)",
+      "Bash(node tools/patch-linker.mjs)",
+      "Bash(node -e ' *)",
+      "Bash(node --input-type=module -e ' *)",
+      "Bash(rm -f /tmp/v.log)"
     ],
     "additionalDirectories": [
       "/tmp"

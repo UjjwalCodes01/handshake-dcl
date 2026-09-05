@@ -3,12 +3,12 @@
   "runtimeVersion": "7",
   "display": {
     "title": "Handshake",
-    "description": "Meet a stranger. Confirm each other. Build something neither of you could alone.",
+    "description": "Meet a stranger. Confirm each other. Build something neither of you could alone. By Ujjwal Tyagi.",
     "navmapThumbnail": "images/scene-thumbnail.png"
   },
-  "owner": "",
+  "owner": "Ujjwal Tyagi",
   "contact": {
-    "name": "",
+    "name": "Ujjwal Tyagi",
     "email": ""
   },
   "main": "bin/index.js",

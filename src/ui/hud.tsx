@@ -46,21 +46,33 @@ export function flashSuccess(durationMs = 1400): void {
 /**
  * Glyphs live here as real string constants, never inline as JSX attribute
  * strings. JSX does NOT process escape sequences inside attribute quotes, so
- * value="\u{1F91D}" renders the literal characters rather than the emoji.
+ * value="\u{25C6}" renders the literal characters rather than the symbol.
+ *
+ * EVERY GLYPH MUST BE INSIDE THE BASIC MULTILINGUAL PLANE (<= U+FFFF).
+ *
+ * This is not a style preference. On a real phone the mobile client rendered
+ * NOTHING for astral-plane emoji: the counter showed "0" instead of "handshake
+ * 0", and the waiting indicator showed "..." — its U+2026 survived while the
+ * U+1F464 beside it vanished. The main action button was blank.
+ *
+ * Emoji were the entire wordless vocabulary, and on the target platform they did
+ * not exist. Geometric shapes (U+25xx), arrows (U+21xx, U+27Fx) and mathematical
+ * operators (U+22xx) are text-presentation characters that the client does draw.
+ * test/glyphs.test.ts enforces this.
  */
-const GLYPH_HANDSHAKE = '\u{1F91D}'
-const GLYPH_HAND_OUT = '\u{270B}'
-const GLYPH_WAITING = '\u{1F464}\u{2026}'
-const GLYPH_WAKING = '\u{1F310}'
-const GLYPH_FIRST = '\u{2728}'
+const GLYPH_HANDSHAKE = '\u{25C6}'  // filled diamond: a completed link
+const GLYPH_HAND_OUT = '\u{21E7}'  // upward arrow: raise a hand
+const GLYPH_WAITING = '\u{25CC}\u{2026}'  // dotted circle: something pending
+const GLYPH_WAKING = '\u{27F3}'  // circular arrow: connecting
+const GLYPH_FIRST = '\u{25C8}'  // diamond in diamond: nothing here yet
 /** Stands in for a participant whose name we never learned (typically a guest). */
 const GLYPH_ANON = '\u{2022}\u{2022}\u{2022}'
 const GLYPH_ECHO = '\u{25C9}'
-const GLYPH_WATCH = '\u{1F441}'
-const GLYPH_WIN = '\u{2714}'
-const GLYPH_LOSE = '\u{2716}'
+const GLYPH_WATCH = '\u{25CE}'  // bullseye: watch this
+const GLYPH_WIN = '\u{2713}'  // text-presentation check
+const GLYPH_LOSE = '\u{2717}'  // text-presentation cross
 const GLYPH_MARK = '\u{2726}'
-const GLYPH_ROLL = '\u{1F517}'
+const GLYPH_ROLL = '\u{2261}'  // three bars: a ranking
 /** Filled/empty pips for wordless progress. */
 const PIP_FULL = '\u{25CF}'
 const PIP_EMPTY = '\u{25CB}'
