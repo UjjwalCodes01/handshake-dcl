@@ -13,7 +13,7 @@ copy-paste. **Deadline: Sept 4, 2026.** Judging Sept 5–11.
 
 | Requirement | Status |
 |---|---|
-| Deployed to a Decentraland **World** (not LAND), publicly reachable through judging | ⬜ **Blocked on the NAME** — `scene.json` targets `handshakedcl.dcl.eth` |
+| Deployed to a Decentraland **World** (not LAND), publicly reachable through judging | ⬜ **Blocked on the NAME** — `scene.json` targets `maincharacter.dcl.eth` |
 | Creates **meaningful social interaction** (empty venues / pure single-player = ineligible) | ✅ Every mark in the world was left by a real person; nothing is simulated |
 | **Persistent standalone** — no scheduled event, host, or moderator | ✅ This is the scene's entire premise |
 | Designed and tested for **mobile / touch / small screens** | ✅ built for it · ⬜ device testing is yours |
@@ -45,7 +45,7 @@ Meet a stranger. Confirm each other. Build something neither of you could alone.
 **Demo / live URL**
 
 ```
-https://decentraland.org/play/?realm=handshakedcl.dcl.eth
+https://decentraland.org/play/?realm=maincharacter.dcl.eth
 ```
 
 **Repository**
@@ -129,7 +129,7 @@ npm run verify     # typecheck, 195 tests, production build, preflight
 ```
 
 - [ ] NAME owned by the deploying wallet, and `scene.json` matches it exactly
-- [ ] Deployed, and reachable via `/goto handshakedcl.dcl.eth`
+- [ ] Deployed, and reachable via `/goto maincharacter.dcl.eth`
 - [ ] Opened **cold** on a phone after 3+ minutes of nobody visiting
 - [ ] A hand left, app closed 5 minutes, hand still there on return
 - [ ] Two wallets, one link — appearing for both

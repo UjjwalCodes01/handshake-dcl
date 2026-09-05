@@ -3,7 +3,7 @@
 **A social scene for Decentraland, built for mobile.**
 Meet a stranger. Confirm each other. Build something neither of you could alone.
 
-World: **`handshakedcl.dcl.eth`** · SDK7 · Friendzone Mobile Buildathon 2026
+World: **`maincharacter.dcl.eth`** · SDK7 · Friendzone Mobile Buildathon 2026
 
 ---
 

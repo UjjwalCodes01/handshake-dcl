@@ -24,13 +24,33 @@ A Decentraland World lives at a NAME you own. The docs are explicit:
 | You own none | Claim one for **100 MANA** at the link above, or buy a minted one on the marketplace |
 | You own an ENS `.eth` domain | That works too — use it instead |
 
+### Current status: permission granted
+
+The Buildathon organisers granted **deployer and streamer permission** to
+**`maincharacter.dcl.eth`** for the wallet
+`0x3660362beb3a95ce16d981e7d30e1e025e741393`, for the duration of the Buildathon.
+No NAME purchase is needed.
+
+Two consequences worth knowing:
+
+- **It is not your World.** Permission is granted, not owned, and it is scoped to
+  the Buildathon. Eligibility requires the scene to stay reachable throughout
+  judging (Sept 5–11), so check it is still live during that window.
+- **Others may share it.** If another participant deploys to the same World
+  without `--multi-scene`, an ordinary deploy replaces what is there. The World
+  was empty when this scene first targeted it, but it is worth re-checking:
+
+  ```bash
+  curl https://worlds-content-server.decentraland.org/world/maincharacter.dcl.eth/about
+  ```
+
 ### This project's target
 
-`scene.json` targets **`handshakedcl.dcl.eth`**, from the NAME **`HandShakeDcl`**.
+`scene.json` targets **`maincharacter.dcl.eth`**, from the NAME **`HandShakeDcl`**.
 
 **World names are lowercase.** Checked against the live index: of 1582 deployed
 worlds, **zero** contain an uppercase character. So a NAME registered as
-`HandShakeDcl` produces the world `handshakedcl.dcl.eth`, and that lowercase form
+`HandShakeDcl` produces the world `maincharacter.dcl.eth`, and that lowercase form
 is what must appear in `scene.json` — regardless of how it looks in the Builder.
 
 Note it has **no hyphen**. An earlier draft targeted `handshake-dcl.dcl.eth`, which
@@ -98,8 +118,8 @@ building for production first — it will rebuild in dev mode.
 ## 4. Verify it is live
 
 ```
-/goto handshakedcl.dcl.eth        (in Decentraland chat)
-decentraland://?realm=handshakedcl.dcl.eth
+/goto maincharacter.dcl.eth        (in Decentraland chat)
+decentraland://?realm=maincharacter.dcl.eth
 ```
 
 Or check the content server directly:

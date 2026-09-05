@@ -13,9 +13,9 @@ test('a world name is configured', () => {
 
 test('the world name is lowercase', () => {
   // Checked against the live index: of 1582 deployed worlds, ZERO contain an
-  // uppercase character. A NAME shown as "HandShakeDcl" in the Builder resolves
-  // to handshakedcl.dcl.eth, and the lowercase form is what must be here.
-  // Getting this wrong is invisible until the deploy is rejected.
+  // uppercase character. Whatever a World is called elsewhere, the lowercase
+  // form is what belongs here — and getting it wrong is invisible until the
+  // deploy is rejected for a signature that does not match the name.
   const name: string = scene.worldConfiguration.name
   assert.equal(name, name.toLowerCase(), `world name "${name}" contains uppercase`)
 })

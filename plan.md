@@ -67,7 +67,7 @@ understood in **under 15 seconds**, in any language.
 | Phase | State |
 |---|---|
 | 0. Scaffold + toolchain | ✅ Done — SDK 7.26.0, `tsc --noEmit` clean, `npm run build` clean |
-| 0b. Deploy pipeline proven on a real phone | ⬜ **Blocked on you** — de-risked as far as possible: `npm run preflight` passes |
+| 0b. Deploy pipeline proven on a real phone | ▶️ **UNBLOCKED** — deployer permission granted on `maincharacter.dcl.eth` |
 | 1. Live handshake vertical slice | ✅ Code complete, **untested on device** |
 | 2. Async persistence + pending hands | ✅ **Write path verified against real data** — see below |
 | 3. Mobile UX pass | ✅ Code complete; **verified running on a real phone** |
@@ -487,6 +487,7 @@ Adding to this list requires cutting from it.
 | Entity growth tanks FPS | Medium | Bounded render cap, deterministic subset |
 | Scope creep | High | Sep 1 hard freeze; stretch list closed |
 | **Disk full on the dev machine** | **Active** | Root filesystem at ~95%. Already caused a truncated download that crashed the Multiplayer Server with SIGBUS |
+| **World is granted, not owned** | Active | Permission is scoped to the Buildathon and the World may be shared. Eligibility needs the scene reachable throughout judging (Sept 5–11), so re-check it is still live during that window |
 | **Dependency drift off the auth-server branch** | Was live, now fixed | SDK pinned EXACTLY (no caret) and `package-lock.json` committed. A caret on a prerelease let npm resolve onto any of 8 other builds, including stable ones with no Multiplayer Server APIs |
 
 ---
